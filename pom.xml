@@ -1,0 +1,217 @@
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.hitorro</groupId>
+    <artifactId>hitorro-jsontypesystem</artifactId>
+    <version>3.0.1</version>
+    <packaging>jar</packaging>
+
+    <name>hitorro-jsontypesystem</name>
+    <description>HiTorro JSON Type System - JVS, type definitions, projections framework, and NLP support as an independent library</description>
+    <url>https://github.com/geekychris/hitorro-root</url>
+
+    <properties>
+        <hitorro.deploy.repo.path>${user.home}/code/hitorro-maven</hitorro.deploy.repo.path>
+        <hitorro.runtime.config.dir>${project.basedir}/../config</hitorro.runtime.config.dir>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>maven central</id>
+            <url>https://repo.maven.apache.org/maven2/</url>
+        </repository>
+        <repository>
+            <id>hitorro-maven</id>
+            <name>Hitorro Maven Repository</name>
+            <url>https://raw.githubusercontent.com/geekychris/hitorro-maven/main</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <!-- HiTorro foundation (Propaccess, JSON utils, core utils) -->
+        <dependency>
+            <groupId>com.hitorro</groupId>
+            <artifactId>hitorro-core</artifactId>
+            <version>3.0.1</version>
+        </dependency>
+
+        <!-- Jackson (JSON processing) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.18.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.2</version>
+        </dependency>
+
+        <!-- Groovy (data mapper DSL / transform scripts) -->
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>3.0.23</version>
+            <type>pom</type>
+        </dependency>
+
+        <!-- OpenNLP (NLP processing) -->
+        <dependency>
+            <groupId>org.apache.opennlp</groupId>
+            <artifactId>opennlp-tools</artifactId>
+            <version>2.5.0</version>
+        </dependency>
+
+        <!-- Lucene Snowball Stemmer -->
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analysis-common</artifactId>
+            <version>9.12.0</version>
+        </dependency>
+
+        <!-- WordNet (JWNL) -->
+        <dependency>
+            <groupId>net.sf.extjwnl</groupId>
+            <artifactId>extjwnl</artifactId>
+            <version>2.0.5</version>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.11.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.11.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>5.11.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.14.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.27.3</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
+                    </includes>
+                    <systemPropertyVariables>
+                        <HT_HOME>${session.executionRootDirectory}</HT_HOME>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <!-- Copy type definitions to runtime config directory -->
+                    <execution>
+                        <id>sync-type-configs</id>
+                        <phase>process-resources</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${hitorro.runtime.config.dir}/types</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../config/types</directory>
+                                    <includes>
+                                        <include>*.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                            <overwrite>true</overwrite>
+                        </configuration>
+                    </execution>
+                    <!-- Copy JSON schemas to runtime config directory -->
+                    <execution>
+                        <id>sync-type-schemas</id>
+                        <phase>process-resources</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${hitorro.runtime.config.dir}/schemas</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../config/schemas</directory>
+                                    <includes>
+                                        <include>*.schema.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                            <overwrite>true</overwrite>
+                        </configuration>
+                    </execution>
+                    <!-- Copy OpenNLP models to data directory -->
+                    <execution>
+                        <id>sync-opennlp-models</id>
+                        <phase>process-resources</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.basedir}/../data/opennlpmodels1.5</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../data/opennlpmodels1.5</directory>
+                                    <includes>
+                                        <include>*.bin</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                            <overwrite>false</overwrite>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <distributionManagement>
+        <repository>
+            <id>hitorro-local</id>
+            <name>Hitorro Local Maven Repository</name>
+            <url>file://${hitorro.deploy.repo.path}</url>
+        </repository>
+        <snapshotRepository>
+            <id>hitorro-local-snapshots</id>
+            <name>Hitorro Local Maven Snapshot Repository</name>
+            <url>file://${hitorro.deploy.repo.path}</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+</project>
