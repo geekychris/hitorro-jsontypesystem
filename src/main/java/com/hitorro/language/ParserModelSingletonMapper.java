@@ -25,9 +25,7 @@ import com.hitorro.util.core.events.cache.SingletonCache;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 import opennlp.tools.parser.ParserModel;
 
-/**
- *
- */
+
 public class ParserModelSingletonMapper extends BaseMapper<IsoLanguage, ParserModel> {
 	public static final SingletonCache<ParserModel> parsersingleton = new SingletonCache("parser model singleton", new ParserModelSingletonMapper());
 

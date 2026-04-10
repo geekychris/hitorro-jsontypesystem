@@ -37,9 +37,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 
-/**
- *
- */
+
 public class Field extends BaseT implements FieldBaseIntf {
     public static final BooleanProperty i18nKey = new BooleanProperty("i18n", "", false);
     public static final BooleanProperty vectorKey = new BooleanProperty("vector", "", false);
@@ -82,7 +80,12 @@ public class Field extends BaseT implements FieldBaseIntf {
         boolean flag = super.init(node);
         this.type = JsonTypeSystem.getMe().getType(typeKey.apply(node));
         this.vector = vectorKey.apply(node);
-        this.dynamicFieldMapper = dynamicFieldMapperKey.apply(node);
+        try {
+            this.dynamicFieldMapper = dynamicFieldMapperKey.apply(node);
+        } catch (Exception | Error e) {
+            // Dynamic mapper class not on classpath or failed to initialize — skip
+            this.dynamicFieldMapper = null;
+        }
         this.i18n = i18nKey.apply(node);
         Collection<Group> g = groupsKey.apply(node);
         MapUtil.addToMapArray(groups, g, Group::getName);

@@ -25,9 +25,7 @@ import com.hitorro.util.core.events.cache.HashCache;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 import opennlp.tools.doccat.DoccatModel;
 
-/**
- *
- */
+
 public class DoccatModelSingletonMapper extends BaseMapper<IsoLanguage, DoccatModel> {
 	public static final HashCache<IsoLanguage, DoccatModel> questionclassifier = new HashCache<IsoLanguage, DoccatModel>("doccat-questions", new DoccatModelSingletonMapper("questions"));
 	public static final HashCache<IsoLanguage, DoccatModel> answertypeclassifier = new HashCache<IsoLanguage, DoccatModel>("doccat-answertype", new DoccatModelSingletonMapper("answertype"));

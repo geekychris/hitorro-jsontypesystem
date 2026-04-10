@@ -24,9 +24,7 @@ package com.hitorro.basetext.maxentclassifier;
 import com.hitorro.language.IsoLanguage;
 import opennlp.tools.doccat.DoccatModel;
 
-/**
- *
- */
+
 public class AnswerTypeClassifier extends BaseClassifier {
     public static String shortName[] = {"P", "L", "O", "T",
             "R", "M", "C", "A",

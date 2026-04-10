@@ -24,9 +24,7 @@ package com.hitorro.language;
 import com.hitorro.util.core.BooleanUtil;
 import com.hitorro.util.core.string.StringUtil;
 
-/**
- *
- */
+
 public class PATElem {
 	private PATElem parent;
 

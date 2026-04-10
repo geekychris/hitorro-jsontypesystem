@@ -30,9 +30,7 @@ import opennlp.tools.util.ObjectStream;
 
 import java.io.*;
 
-/**
- *
- */
+
 public class BaseEventStream implements ObjectStream<Event> {
     protected BufferedReader reader;
     protected String line;

@@ -41,9 +41,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 
-/**
- *
- */
+
 public class Type extends BaseT implements TypeBaseIntf {
     public static final com.hitorro.util.json.keys.BooleanProperty fetchLangKey = new com.hitorro.util.json.keys.BooleanProperty("fetchlang", "", false);
     public static HashCache<String, HashCache<Type, ExecutionBuilder>> projectionCache = new HashCache<>(1000000

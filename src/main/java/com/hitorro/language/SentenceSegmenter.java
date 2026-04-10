@@ -27,9 +27,7 @@ import opennlp.tools.sentdetect.SentenceDetectorME;
 
 import java.io.IOException;
 
-/**
- *
- */
+
 public class SentenceSegmenter implements PooledObjectIntf<IsoLanguage> {
 	public static final String SentDetectKey = "sentdetect";
 	protected PoolContainer pc;

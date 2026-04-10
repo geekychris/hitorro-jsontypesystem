@@ -28,9 +28,7 @@ import com.hitorro.util.core.iterator.mappers.BaseMapper;
 
 import java.io.IOException;
 
-/**
- *
- */
+
 public class PartOfSpeechSingletonMapper extends BaseMapper<IsoLanguage, PartOfSpeech> {
 	public static final HashCache<IsoLanguage, PoolContainer<IsoLanguage, PartOfSpeech>> singleton = HashCache.getPooledCache("POS Singleton", 20, new PartOfSpeechSingletonMapper());
 

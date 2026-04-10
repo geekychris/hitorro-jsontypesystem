@@ -30,9 +30,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- *
- */
+
 public class PennAndTreebankBase implements CSVConsumer {
 	private final String lang;
 	private boolean m_firstRowProcessed = false;

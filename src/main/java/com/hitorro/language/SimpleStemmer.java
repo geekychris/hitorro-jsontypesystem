@@ -21,9 +21,7 @@
  */
 package com.hitorro.language;
 
-/**
- *
- */
+
 public interface SimpleStemmer {
 
 	String stem(String stemMe);

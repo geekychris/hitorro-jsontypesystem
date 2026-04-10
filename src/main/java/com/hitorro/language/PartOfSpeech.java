@@ -33,9 +33,7 @@ import opennlp.tools.tokenize.TokenizerME;
 
 import java.io.IOException;
 
-/**
- *
- */
+
 public class PartOfSpeech implements PooledObjectIntf<IsoLanguage> {
 	public static final String PartOfSpeechDetectKey = "posdetect";
 	/**

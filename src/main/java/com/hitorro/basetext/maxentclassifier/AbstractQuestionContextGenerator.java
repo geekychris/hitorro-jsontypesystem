@@ -31,9 +31,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-/**
- *
- */
+
 public abstract class AbstractQuestionContextGenerator implements GeneratorInterface {
     protected static final Pattern falseHeadsPattern = Pattern.compile("^(name|type|kind|sort|form|one|breed|names|variety)$");
     protected static final Pattern copulaPattern = Pattern.compile("^(is|are|'s|were|was|will)$");

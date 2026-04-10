@@ -47,9 +47,7 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- *
- */
+
 public abstract class BaseClassifier<T extends Enum> implements PooledObjectIntf<IsoLanguage> {
     protected DoccatModel model;
     protected double[] probs;

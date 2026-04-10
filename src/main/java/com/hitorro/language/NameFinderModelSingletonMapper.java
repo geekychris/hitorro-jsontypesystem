@@ -26,9 +26,7 @@ import com.hitorro.util.core.iterator.mappers.BaseMapper;
 import opennlp.tools.namefind.TokenNameFinderModel;
 
 
-/**
- *
- */
+
 public class NameFinderModelSingletonMapper extends BaseMapper<IsoLanguage, TokenNameFinderModel> {
 	public static final HashCache<IsoLanguage, TokenNameFinderModel> person = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-person", new NameFinderModelSingletonMapper("person"));
 	public static final HashCache<IsoLanguage, TokenNameFinderModel> organization = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-organization", new NameFinderModelSingletonMapper("organization"));

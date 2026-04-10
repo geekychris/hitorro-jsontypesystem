@@ -24,9 +24,7 @@ package com.hitorro.language;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 import opennlp.tools.tokenize.TokenizerModel;
 
-/**
- *
- */
+
 public class TokenizerModelSingleton extends BaseMapper<IsoLanguage, TokenizerModel> {
 	public static final TokenizerModelSingleton singleton = new TokenizerModelSingleton();
 

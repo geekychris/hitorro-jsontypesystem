@@ -27,9 +27,7 @@ import opennlp.tools.parser.Parser;
 import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.util.Span;
 
-/**
- *
- */
+
 public class ChunkParser implements Parser {
     private ChunkerME chunker;
     private POSTaggerME tagger;

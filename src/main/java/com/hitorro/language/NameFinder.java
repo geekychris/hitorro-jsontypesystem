@@ -27,9 +27,7 @@ import gnu.trove.map.hash.TObjectLongHashMap;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.util.Span;
 
-/**
- *
- */
+
 public class NameFinder {
 	private final NameFinderME nameFinder;
 	private String[] toks;

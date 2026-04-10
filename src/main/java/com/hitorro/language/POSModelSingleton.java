@@ -25,9 +25,7 @@ import com.hitorro.util.core.events.cache.HashCache;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 import opennlp.tools.postag.POSModel;
 
-/**
- *
- */
+
 public class POSModelSingleton extends BaseMapper<IsoLanguage, POSModel> {
 	public static final HashCache<IsoLanguage, POSModel> singleton = new HashCache<IsoLanguage, POSModel>("posmodel", new POSModelSingleton());
 

@@ -32,9 +32,7 @@ import com.hitorro.util.core.events.cache.HashCache;
 import com.hitorro.util.core.iterator.Mapper;
 import com.hitorro.util.core.string.StringUtil;
 
-/**
- *
- */
+
 public class JsonTypeSystem {
 
     /**

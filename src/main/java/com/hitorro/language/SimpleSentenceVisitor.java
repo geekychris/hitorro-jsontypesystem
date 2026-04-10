@@ -23,9 +23,7 @@ package com.hitorro.language;
 
 import opennlp.tools.util.Span;
 
-/**
- *
- */
+
 public abstract class SimpleSentenceVisitor implements SentenceVisitor {
 	@Override
 	public boolean visit(final String content, final Span span, int sentenceNumber) {

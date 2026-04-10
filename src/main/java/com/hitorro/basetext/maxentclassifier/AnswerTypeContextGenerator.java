@@ -27,9 +27,7 @@ import opennlp.tools.parser.Parse;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- *
- */
+
 public class AnswerTypeContextGenerator extends AbstractQuestionContextGenerator {
     private IsoLanguage lang;
 

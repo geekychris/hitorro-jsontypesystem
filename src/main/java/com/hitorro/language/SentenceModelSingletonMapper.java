@@ -25,9 +25,7 @@ import com.hitorro.util.core.events.cache.HashCache;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 import opennlp.tools.sentdetect.SentenceModel;
 
-/**
- *
- */
+
 public class SentenceModelSingletonMapper extends BaseMapper<IsoLanguage, SentenceModel> {
 	public static final String EventName = "sentencemodelsingleton";
 	public static final HashCache<IsoLanguage, SentenceModel> singleton = new HashCache(EventName, new SentenceModelSingletonMapper());
