@@ -48,7 +48,10 @@ public class SentenceDetectorSingleton extends BaseMapper<IsoLanguage, SentenceS
 	public SentenceSegmenter apply(IsoLanguage key) {
 		SentenceSegmenter ss = new SentenceSegmenter();
 		try {
-			ss.init(key);
+			if (!ss.init(key)) {
+				Log.sentence.info("No sentence model available for language: %s", key);
+				return null;
+			}
 		} catch (IOException e) {
 			Log.sentence.error("Unable to initialize sentence segmenter %s %s %e", key, e, e);
 			return null;

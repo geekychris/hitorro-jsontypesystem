@@ -145,10 +145,8 @@ public class PartOfSpeech implements PooledObjectIntf<IsoLanguage> {
 
 	public boolean init(IsoLanguage val) throws IOException {
 		tokenizerME = val.getTokenizer();
-
 		postagger = val.getPOSTagger();
-
-		return true;
+		return tokenizerME != null && postagger != null;
 	}
 
 	public POS getPOS(String[] content) {

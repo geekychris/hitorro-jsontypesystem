@@ -152,11 +152,13 @@ public class IsoLanguage implements IsoLanguageIntf {
 	}
 
 	SentenceDetectorME getSentenceDetector() {
-		return new SentenceDetectorME(getSentenceModel());
+		SentenceModel model = getSentenceModel();
+		return model != null ? new SentenceDetectorME(model) : null;
 	}
 
 	TokenizerME getTokenizer() {
-		return new TokenizerME(getTokenizerModel());
+		TokenizerModel model = getTokenizerModel();
+		return model != null ? new TokenizerME(model) : null;
 	}
 
 	TokenizerModel getTokenizerModel() {
@@ -172,7 +174,8 @@ public class IsoLanguage implements IsoLanguageIntf {
 	}
 
 	POSTaggerME getPOSTagger() {
-		return new POSTaggerME(POSModelSingleton.singleton.get(this));
+		POSModel model = POSModelSingleton.singleton.get(this);
+		return model != null ? new POSTaggerME(model) : null;
 	}
 
 	/**

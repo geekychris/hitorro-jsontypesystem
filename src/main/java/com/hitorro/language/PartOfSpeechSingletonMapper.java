@@ -38,7 +38,10 @@ public class PartOfSpeechSingletonMapper extends BaseMapper<IsoLanguage, PartOfS
 	public PartOfSpeech apply(IsoLanguage key) {
 		PartOfSpeech ss = new PartOfSpeech(key);
 		try {
-			ss.init(key);
+			if (!ss.init(key)) {
+				Log.sentence.info("No POS/tokenizer models available for language: %s", key);
+				return null;
+			}
 			return ss;
 		} catch (IOException e) {
 			Log.sentence.error("Unable to load PartOfSpeech with error %s %e", e, e);

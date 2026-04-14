@@ -451,12 +451,87 @@ Types and execution plans are cached. The system also supports loading from JSON
 
 NLP operations require OpenNLP model files. Default location: `${ht_bin}/data/opennlpmodels1.5/`
 
-Required models per language (e.g., English):
-- `en-sent.bin` — sentence detection
-- `en-token.bin` — tokenization
-- `en-pos-maxent.bin` — POS tagging
-- `en-chunker.bin` — chunking
-- `en-ner-person.bin`, `en-ner-location.bin`, `en-ner-organization.bin` — NER
+File naming convention: `{lang}-{type}.bin` (e.g., `en-sent.bin`, `de-pos-maxent.bin`)
+
+**Model types per language:**
+
+| Model Type | File Pattern | Purpose |
+|-----------|-------------|---------|
+| Sentence detection | `{lang}-sent.bin` | Sentence boundary detection |
+| Tokenization | `{lang}-token.bin` | Word tokenization |
+| POS tagging | `{lang}-pos-maxent.bin` | Part-of-speech tagging |
+| NER | `{lang}-ner-{entity}.bin` | Named entity recognition (person, organization, location, date, money, time, percentage) |
+| Chunking | `{lang}-chunker.bin` | Shallow parsing |
+| Parsing | `{lang}-parser-chunking.bin` | Full dependency parsing |
+
+**Available models by language:**
+
+| Language | sent | token | pos | NER | Source |
+|----------|:----:|:-----:|:---:|:---:|--------|
+| English (en) | Y | Y | Y | person, org, loc, date, money, time, pct | OpenNLP 1.5 |
+| German (de) | Y | Y | Y | via ONNX DL | OpenNLP UD 1.2 |
+| Spanish (es) | Y | Y | Y | person, org, loc, misc | OpenNLP 1.5 + UD 1.2 |
+| French (fr) | Y | Y | Y | via ONNX DL | OpenNLP UD 1.2 |
+| Italian (it) | Y | Y | Y | via ONNX DL | OpenNLP UD 1.2 |
+| Dutch (nl) | Y | Y | Y | person, org, loc, misc | OpenNLP 1.5 |
+| Portuguese (pt) | Y | Y | Y | via ONNX DL | OpenNLP UD 1.2 |
+| Danish (da) | Y | Y | Y | via ONNX DL | OpenNLP 1.5 |
+| Swedish (se) | Y | Y | Y | via ONNX DL | OpenNLP 1.5 |
+
+Models are loaded lazily — if a model file doesn't exist for a language, that NLP feature is gracefully skipped.
+
+### ONNX Deep Learning NER (HuggingFace Transformer Fallback)
+
+For languages without traditional `.bin` NER models, the system falls back to a **multilingual HuggingFace transformer model** running via ONNX Runtime. This uses `Davlan/xlm-roberta-base-ner-hrl`, which covers 10+ languages for person, organization, location, and date entity recognition.
+
+**Setup:**
+
+```bash
+# One-time: export the HuggingFace model to ONNX (requires Python 3.8+)
+./download-onnx-models.sh
+```
+
+This installs `optimum` and `transformers` via pip, exports the model to ONNX format, and saves it to `data/opennlpmodels-onnx/ner-multilingual/` with:
+- `model.onnx` — the ONNX model (~1GB)
+- `tokenizer.json` — HuggingFace tokenizer (SentencePiece BPE)
+- `id2labels.json` — label index to entity type mapping
+
+**How it works:**
+
+The `OnnxNerFinder` class (`com.hitorro.language.OnnxNerFinder`) is a singleton that:
+1. Loads lazily on first use from `${HT_BIN}/data/opennlpmodels-onnx/ner-multilingual/`
+2. Uses DJL's `HuggingFaceTokenizer` for correct SentencePiece tokenization
+3. Runs ONNX Runtime inference (CPU)
+4. Decodes BIO tags for all entity types (PER, ORG, LOC, DATE)
+5. Returns `Span[]` with token indices — same contract as `NameFinderME.find()`
+
+The `NERMarkupMapper` automatically falls back to the ONNX model when no `.bin` NER models exist for a language. No code changes needed — just run the download script and restart.
+
+**Architecture:**
+
+```
+NERMarkupMapper.loadFinders(language)
+    ├── Try .bin models: person.bin, organization.bin, location.bin, date.bin, money.bin
+    │   └── Found → use NameFinderME (fast, per-entity-type)
+    └── None found → OnnxNerFinder.getInstance()
+        └── Loads shared ONNX model (once) → runs transformer inference → all entity types
+```
+
+**Dependencies:**
+
+```xml
+<!-- Already included in hitorro-jsontypesystem -->
+<dependency>
+    <groupId>org.apache.opennlp</groupId>
+    <artifactId>opennlp-dl</artifactId>
+    <version>2.5.0</version>
+</dependency>
+<dependency>
+    <groupId>ai.djl.huggingface</groupId>
+    <artifactId>tokenizers</artifactId>
+    <version>0.33.0</version>
+</dependency>
+```
 
 ## Maven Dependency
 
@@ -484,5 +559,8 @@ Some tests require `HT_HOME` set to the project root and config files present at
 | hitorro-core | 3.0.1 | Foundation (Propaccess, JSON, file I/O) |
 | Jackson | 2.18.2 | JSON processing |
 | Groovy | 3.0.23 | Data mapping DSL |
-| OpenNLP | 2.5.0 | Sentence detection, POS tagging, NER, chunking |
+| OpenNLP tools | 2.5.0 | Sentence detection, POS tagging, NER, chunking |
+| OpenNLP DL | 2.5.0 | ONNX Runtime for transformer NER models |
+| DJL Tokenizers | 0.33.0 | HuggingFace tokenizer (SentencePiece/BPE) for ONNX NER |
+| ONNX Runtime | (transitive) | Inference engine for transformer models |
 | extJWNL | 2.0.5 | WordNet dictionary |

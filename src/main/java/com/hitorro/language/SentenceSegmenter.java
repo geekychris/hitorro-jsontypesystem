@@ -36,7 +36,7 @@ public class SentenceSegmenter implements PooledObjectIntf<IsoLanguage> {
 
 	public boolean init(IsoLanguage val) throws IOException {
 		impl = val.getSentenceDetector();
-		return true;
+		return impl != null;
 	}
 
 	public Sentences getSentenceOffsets(String content) {

@@ -28,6 +28,7 @@ import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.language.Iso639Table;
 import com.hitorro.language.IsoLanguage;
 import com.hitorro.language.Models;
+import com.hitorro.language.OnnxNerFinder;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import opennlp.tools.namefind.NameFinderME;
 import opennlp.tools.namefind.TokenNameFinderModel;
@@ -95,9 +96,9 @@ public class NERMarkupMapper extends DynamicFieldMapper {
             // Run all NER finders and collect spans
             List<TaggedSpan> allSpans = new ArrayList<>();
             for (NameFinderEntry entry : finders) {
-                Span[] spans = entry.finder.find(tokens);
+                Span[] spans = entry.find(tokens);
                 for (Span span : spans) {
-                    allSpans.add(new TaggedSpan(span, entry.label));
+                    allSpans.add(new TaggedSpan(span, entry.labelFor(span)));
                 }
             }
 
@@ -115,6 +116,16 @@ public class NERMarkupMapper extends DynamicFieldMapper {
         addFinder(finders, Models.location.get(lang), "location");
         addFinder(finders, Models.date.get(lang), "date");
         addFinder(finders, Models.money.get(lang), "money");
+
+        // Fallback: if no .bin NER models for this language, try ONNX DL model
+        if (finders.isEmpty()) {
+            OnnxNerFinder onnx = OnnxNerFinder.getInstance();
+            if (onnx != null) {
+                // DL model handles all entity types in one pass — Span.getType() carries the label
+                finders.add(new NameFinderEntry(onnx, null));
+            }
+        }
+
         return finders;
     }
 
@@ -154,13 +165,40 @@ public class NERMarkupMapper extends DynamicFieldMapper {
         return sb.toString();
     }
 
+    /**
+     * Wraps either a NameFinderME (.bin model, per-entity-type) or an OnnxNerFinder (DL, all types).
+     * When using the DL model, label is null and the entity type comes from Span.getType().
+     */
     private static class NameFinderEntry {
-        final NameFinderME finder;
+        final NameFinderME meFinder;
+        final OnnxNerFinder dlFinder;
         final String label;
 
         NameFinderEntry(NameFinderME finder, String label) {
-            this.finder = finder;
+            this.meFinder = finder;
+            this.dlFinder = null;
             this.label = label;
+        }
+
+        NameFinderEntry(OnnxNerFinder finder, String label) {
+            this.meFinder = null;
+            this.dlFinder = finder;
+            this.label = label;
+        }
+
+        Span[] find(String[] tokens) {
+            if (meFinder != null) return meFinder.find(tokens);
+            if (dlFinder != null) return dlFinder.find(tokens);
+            return new Span[0];
+        }
+
+        /**
+         * Get the label for a span. For ME finders, use the fixed label.
+         * For DL finders, the label comes from the Span's type field.
+         */
+        String labelFor(Span span) {
+            if (label != null) return label;
+            return span.getType() != null ? span.getType() : "misc";
         }
     }
 

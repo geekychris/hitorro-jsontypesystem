@@ -36,9 +36,11 @@ import java.util.function.Function;
 public class OpenNLPClosures {
     public static <O> O chunkParser(IsoLanguage lang, Function<ChunkParser, O> func) {
         PoolContainer<IsoLanguage, PartOfSpeech> pc = PartOfSpeechSingletonMapper.singleton.get(lang);
+        if (pc == null) return null;
         PartOfSpeech pos = null;
         try {
             pos = pc.get();
+            if (pos == null) return null;
             ChunkerModel cm = pos.getChunker();
             POSTaggerME ptme = pos.getPOSTagger();
             if (cm == null || ptme == null) {
@@ -53,9 +55,11 @@ public class OpenNLPClosures {
 
     public static <O> O sentenceSegmenter(IsoLanguage lang, Function<SentenceSegmenter, O> func) {
         PoolContainer<IsoLanguage, SentenceSegmenter> pool = SentenceDetectorSingleton.singleton.get(lang);
+        if (pool == null) return null;
         SentenceSegmenter ss = null;
         try {
             ss = pool.get();
+            if (ss == null) return null;
             return func.apply(ss);
         } finally {
             pool.returnIt(ss);
@@ -64,9 +68,11 @@ public class OpenNLPClosures {
 
     public static <O> O sentencePOS(IsoLanguage lang, Function<PartOfSpeech, O> func) {
         PoolContainer<IsoLanguage, PartOfSpeech> posPool = PartOfSpeechSingletonMapper.singleton.get(lang);
+        if (posPool == null) return null;
         PartOfSpeech pos = null;
         try {
             pos = posPool.get();
+            if (pos == null) return null;
             return func.apply(pos);
         } finally {
             posPool.returnIt(pos);
