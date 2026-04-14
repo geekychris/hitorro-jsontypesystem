@@ -94,6 +94,20 @@ text (raw input)
 
 Each mapper in this chain reads from its declared source fields and produces its output. Because computation is lazy, only the fields actually accessed are computed.
 
+#### How Dynamic Field Caching Works
+
+Dynamic fields use a **"compute on first read, cache on the JSON node"** pattern:
+
+1. When `JVS.get(path)` navigates to a field marked `dynamic`, the field doesn't exist on the JSON yet
+2. `PAContextTyped.getObjectOrArrayIfMissing()` detects the missing node and calls `getEither()`
+3. `getEither()` looks up the `DynamicFieldMapper` and calls `map()` to compute the value
+4. The computed `JsonNode` is returned to `PAContext.setObjectOrArray()` which writes it directly onto the parent JSON node: `((ObjectNode) parent).set(fieldName, computedValue)`
+5. On subsequent reads, the value is found on the JSON node and returned without recomputation
+
+This means the JSON document itself is the cache — once a dynamic field is materialized, it becomes a regular field on the document. The `EnrichAction` in the projection framework exploits this: it calls `JVS.get(path)` on each dynamic field to trigger materialization as a side effect.
+
+**Important**: `PAContextTyped` intentionally overrides `attemptCreation()` to allow node creation during read operations (`SetMode.No`). This differs from the base `PAContext` which only creates nodes during writes. This "create on read" behavior is the core mechanism that makes dynamic fields work — without it, reads on missing dynamic fields would simply return null.
+
 **Built-in dynamic field mappers:**
 
 | Mapper | Purpose |

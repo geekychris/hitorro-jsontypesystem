@@ -53,6 +53,13 @@ public abstract class DynamicFieldMapper implements JsonInitable {
 
     public abstract JsonNode map(JVS jvs, Propaccess pa, int depth);
 
+    /**
+     * Resolves the input field values for this dynamic mapper.
+     * Fields declared with a leading dot (e.g. ".text", ".lang") are resolved relative to the
+     * current path context; absolute paths are resolved from the document root.
+     * Returns null elements for fields that don't exist (not an error — the field may not
+     * have been materialized yet). Logs actual path resolution errors at debug level.
+     */
     protected JsonNode[] getValues(JVS jvs, Propaccess pa, int depth) {
         JsonNode arr[] = new JsonNode[fields.length];
         for (int i = 0; i < fields.length; i++) {
@@ -61,19 +68,16 @@ public abstract class DynamicFieldMapper implements JsonInitable {
                 Propaccess fNew = pa.clone();
                 fNew.pop();
                 fNew.append(f);
-
                 try {
                     arr[i] = jvs.get(fNew);
-                } catch (PropaccessError propaccessError) {
-                    // XXX swallow
-                    Log.type.error("DynamicFieldMapper(2) %s %e", propaccessError, propaccessError);
+                } catch (PropaccessError e) {
+                    Log.type.debug("DynamicFieldMapper: could not resolve relative field %s: %s", fNew, e.getMessage());
                 }
             } else {
                 try {
                     arr[i] = jvs.get(f);
-                } catch (PropaccessError propaccessError) {
-                    // XXX swallow
-                    Log.type.error("DynamicFieldMapper(2) %s %e", propaccessError, propaccessError);
+                } catch (PropaccessError e) {
+                    Log.type.debug("DynamicFieldMapper: could not resolve field %s: %s", f, e.getMessage());
                 }
             }
         }

@@ -77,7 +77,8 @@ public class JVS implements VS {
 	public static Comparator<JVS> identityComparator = (o1, o2) -> o1.getId().compareTo(o2.getId());
 	public static Function<JVS, String> keyGenerator = JVS::getId;
 
-	// Propaccess cache for string-path methods
+	// Propaccess cache for string-path methods — bounded to prevent memory leaks with dynamic paths
+	private static final int PA_CACHE_MAX_SIZE = 10000;
 	private static final ConcurrentHashMap<String, Propaccess> paCache = new ConcurrentHashMap<>();
 
 	private JsonNode root;
@@ -111,7 +112,9 @@ public class JVS implements VS {
 		Propaccess cached = paCache.get(path);
 		if (cached == null) {
 			cached = new Propaccess(path);
-			paCache.put(path, cached);
+			if (paCache.size() < PA_CACHE_MAX_SIZE) {
+				paCache.put(path, cached);
+			}
 		}
 		return new Propaccess(cached);
 	}

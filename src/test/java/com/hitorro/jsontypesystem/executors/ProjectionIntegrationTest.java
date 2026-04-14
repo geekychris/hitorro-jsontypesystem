@@ -49,7 +49,7 @@ import static org.assertj.core.api.Assertions.*;
  * Requires the type system and solr field config to be accessible via Env.
  */
 @DisplayName("Projection Integration Tests")
-@Disabled("Requires full runtime config (types + jsonconfigs/solr_fields.json)")
+@Disabled("Requires full runtime config (types + jsonconfigs). Run manually with -DHT_BIN=<hitorro-root>")
 class ProjectionIntegrationTest implements TestPlus {
 
 	private static final String2JsonMapper jsonMapper = new String2JsonMapper();

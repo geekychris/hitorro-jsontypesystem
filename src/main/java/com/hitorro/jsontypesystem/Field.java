@@ -23,6 +23,7 @@ package com.hitorro.jsontypesystem;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.dynamic.DynamicFieldMapper;
+import com.hitorro.util.core.Log;
 import com.hitorro.util.core.map.MapUtil;
 import com.hitorro.util.core.string.Fmt;
 import com.hitorro.util.json.keys.BooleanProperty;
@@ -82,8 +83,9 @@ public class Field extends BaseT implements FieldBaseIntf {
         this.vector = vectorKey.apply(node);
         try {
             this.dynamicFieldMapper = dynamicFieldMapperKey.apply(node);
-        } catch (Exception | Error e) {
-            // Dynamic mapper class not on classpath or failed to initialize — skip
+        } catch (Exception e) {
+            // Dynamic mapper class not on classpath or failed to initialize — skip gracefully
+            Log.type.info("Dynamic mapper not available for field %s: %s", getName(), e.getMessage());
             this.dynamicFieldMapper = null;
         }
         this.i18n = i18nKey.apply(node);
