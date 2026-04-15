@@ -61,10 +61,36 @@ public class OnnxNerFinder {
     private OnnxNerFinder(File modelFile, File tokenizerFile, File labelsFile) throws Exception {
         this.env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
+        configureAcceleration(opts);
         this.session = env.createSession(modelFile.getPath(), opts);
         this.tokenizer = HuggingFaceTokenizer.newInstance(tokenizerFile.toPath());
         this.id2Labels = loadLabels(labelsFile);
         Log.lang.info("OnnxNerFinder loaded: %d labels, model=%s", id2Labels.size(), modelFile.getName());
+    }
+
+    /**
+     * Configure hardware acceleration based on the platform.
+     * On macOS (Apple Silicon): enables CoreML which routes to ANE/Metal GPU automatically.
+     * On Linux with CUDA: enables CUDA GPU acceleration.
+     * Falls back to CPU silently if the provider is unavailable.
+     */
+    private void configureAcceleration(OrtSession.SessionOptions opts) {
+        String os = System.getProperty("os.name", "").toLowerCase();
+        if (os.contains("mac")) {
+            try {
+                opts.addCoreML();
+                Log.lang.info("ONNX: CoreML execution provider enabled (Apple Silicon acceleration)");
+            } catch (Exception e) {
+                Log.lang.info("ONNX: CoreML not available, using CPU: %s", e.getMessage());
+            }
+        } else if (os.contains("linux")) {
+            try {
+                opts.addCUDA();
+                Log.lang.info("ONNX: CUDA execution provider enabled (GPU acceleration)");
+            } catch (Exception e) {
+                Log.lang.info("ONNX: CUDA not available, using CPU: %s", e.getMessage());
+            }
+        }
     }
 
     /**

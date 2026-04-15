@@ -38,7 +38,7 @@ import java.util.List;
 
 
 public abstract class DynamicFieldMapper implements JsonInitable {
-    public static final CollectionProperty<Propaccess> propsKey = new CollectionProperty("fields", "", null, PropaccesspMap.instance);
+    public static CollectionProperty<Propaccess> propsKey = new CollectionProperty("fields", "", null, PropaccesspMap.instance);
     private Propaccess fields[];
 
     public boolean init(JsonNode node) {

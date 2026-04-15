@@ -56,7 +56,7 @@ import java.io.IOException;
  */
 public class IsoLanguage implements IsoLanguageIntf {
 
-	public static final FileProperty OpenNLPRootPath = new FileProperty("opennlp.rootpath", "", "${ht_bin}/data/opennlpmodels1.5");
+	public static FileProperty OpenNLPRootPath = new FileProperty("opennlp.rootpath", "", "${ht_bin}/data/opennlpmodels1.5");
 	private String three = "";
 	private String terminilogic = "";
 	private String two = "";

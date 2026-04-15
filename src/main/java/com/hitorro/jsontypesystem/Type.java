@@ -43,7 +43,7 @@ import java.util.function.Predicate;
 
 
 public class Type extends BaseT implements TypeBaseIntf {
-    public static final com.hitorro.util.json.keys.BooleanProperty fetchLangKey = new com.hitorro.util.json.keys.BooleanProperty("fetchlang", "", false);
+    public static com.hitorro.util.json.keys.BooleanProperty fetchLangKey = new com.hitorro.util.json.keys.BooleanProperty("fetchlang", "", false);
     public static HashCache<String, HashCache<Type, ExecutionBuilder>> projectionCache = new HashCache<>(1000000
             , true, null, "execution builders", ExecutionBuilderCacheMapper.ebcm);
     public static com.hitorro.util.json.keys.StringProperty supertypeKey = new com.hitorro.util.json.keys.StringProperty("super", "object super type", null);

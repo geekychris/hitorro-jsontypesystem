@@ -68,7 +68,7 @@ public class BaseEventStream implements ObjectStream<Event> {
      * @param event The event for which a string representation is needed.
      * @return A string representing the specified event.
      */
-    public static String toLine(Event event) {
+    public static final String toLine(Event event) {
         StringBuffer sb = new StringBuffer();
         sb.append(event.getOutcome());
         String[] context = event.getContext();

@@ -31,7 +31,7 @@ import java.io.IOException;
 
 
 public class SentenceDetectorSingleton extends BaseMapper<IsoLanguage, SentenceSegmenter> {
-	public static final HashCache<IsoLanguage, PoolContainer<IsoLanguage, SentenceSegmenter>> singleton = new HashCache(0, true, null, "SentenceDectector Singleton",
+	public static HashCache<IsoLanguage, PoolContainer<IsoLanguage, SentenceSegmenter>> singleton = new HashCache(0, true, null, "SentenceDectector Singleton",
 			new PooledObjectContainerMapper(10, new SentenceDetectorSingleton()));
 
 

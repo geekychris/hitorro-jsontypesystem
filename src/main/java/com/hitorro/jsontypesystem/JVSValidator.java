@@ -66,11 +66,11 @@ public class JVSValidator {
 		return violations;
 	}
 
-	public static String report(JVS doc, Type type) {
+	public static final String report(JVS doc, Type type) {
 		return reportAgainstDefinition(doc, type.getMetaNode());
 	}
 
-	public static String reportAgainstDefinition(JVS doc, JsonNode typeDef) {
+	public static final String reportAgainstDefinition(JVS doc, JsonNode typeDef) {
 		var violations = validateAgainstDefinition(doc, typeDef);
 		String typeName = typeDef.has("name") ? typeDef.get("name").asText() : "unknown";
 		if (violations.isEmpty()) {

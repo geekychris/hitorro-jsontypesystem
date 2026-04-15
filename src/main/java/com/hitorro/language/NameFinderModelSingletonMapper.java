@@ -28,11 +28,11 @@ import opennlp.tools.namefind.TokenNameFinderModel;
 
 
 public class NameFinderModelSingletonMapper extends BaseMapper<IsoLanguage, TokenNameFinderModel> {
-	public static final HashCache<IsoLanguage, TokenNameFinderModel> person = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-person", new NameFinderModelSingletonMapper("person"));
-	public static final HashCache<IsoLanguage, TokenNameFinderModel> organization = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-organization", new NameFinderModelSingletonMapper("organization"));
-	public static final HashCache<IsoLanguage, TokenNameFinderModel> location = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-location", new NameFinderModelSingletonMapper("location"));
-	public static final HashCache<IsoLanguage, TokenNameFinderModel> date = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-date", new NameFinderModelSingletonMapper("date"));
-	public static final HashCache<IsoLanguage, TokenNameFinderModel> money = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-money", new NameFinderModelSingletonMapper("money"));
+	public static HashCache<IsoLanguage, TokenNameFinderModel> person = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-person", new NameFinderModelSingletonMapper("person"));
+	public static HashCache<IsoLanguage, TokenNameFinderModel> organization = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-organization", new NameFinderModelSingletonMapper("organization"));
+	public static HashCache<IsoLanguage, TokenNameFinderModel> location = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-location", new NameFinderModelSingletonMapper("location"));
+	public static HashCache<IsoLanguage, TokenNameFinderModel> date = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-date", new NameFinderModelSingletonMapper("date"));
+	public static HashCache<IsoLanguage, TokenNameFinderModel> money = new HashCache<IsoLanguage, TokenNameFinderModel>("namefinder-money", new NameFinderModelSingletonMapper("money"));
 
 	private final String intent;
 

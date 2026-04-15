@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 public class JVSUtils {
-    public static final BooleanProperty DebugMode = new BooleanProperty("debug", "If debug mode is enabled loads extra config files", false);
+    public static BooleanProperty DebugMode = new BooleanProperty("debug", "If debug mode is enabled loads extra config files", false);
 
     /**
      * convert old style configs to JSON
@@ -68,7 +68,7 @@ public class JVSUtils {
         return convertMapToJVS(props.getMap(), jvs);
     }
 
-    public static String convertPropPathToJVS(String s) {
+    public static final String convertPropPathToJVS(String s) {
         String parts[] = StringUtil.tokenizeFromSingleChar(s, ".");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < parts.length; i++) {

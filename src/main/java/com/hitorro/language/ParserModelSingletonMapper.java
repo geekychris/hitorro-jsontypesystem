@@ -27,7 +27,7 @@ import opennlp.tools.parser.ParserModel;
 
 
 public class ParserModelSingletonMapper extends BaseMapper<IsoLanguage, ParserModel> {
-	public static final SingletonCache<ParserModel> parsersingleton = new SingletonCache("parser model singleton", new ParserModelSingletonMapper());
+	public static SingletonCache<ParserModel> parsersingleton = new SingletonCache("parser model singleton", new ParserModelSingletonMapper());
 
 
 	public ParserModelSingletonMapper() {

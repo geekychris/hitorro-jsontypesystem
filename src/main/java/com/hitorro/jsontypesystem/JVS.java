@@ -59,15 +59,15 @@ import java.util.function.Function;
 public class JVS implements VS {
 
 	// Well-known keys
-	public static final StringProperty typeKey = new StringProperty("type", "", null);
-	public static final Propaccess didKey = new Propaccess("id.did");
-	public static final Propaccess idKey = new Propaccess("id.id");
-	public static final Propaccess createdKey = new Propaccess("times.created");
-	public static final Propaccess modifiedKey = new Propaccess("times.modified");
-	public static final Propaccess titleKey = new Propaccess("title.mls");
-	public static final Propaccess bodyKey = new Propaccess("body.mls");
-	public static final Propaccess domainKey = new Propaccess("id.domain");
-	public static final Propaccess docKey = new Propaccess("doc");
+	public static StringProperty typeKey = new StringProperty("type", "", null);
+	public static Propaccess didKey = new Propaccess("id.did");
+	public static Propaccess idKey = new Propaccess("id.id");
+	public static Propaccess createdKey = new Propaccess("times.created");
+	public static Propaccess modifiedKey = new Propaccess("times.modified");
+	public static Propaccess titleKey = new Propaccess("title.mls");
+	public static Propaccess bodyKey = new Propaccess("body.mls");
+	public static Propaccess domainKey = new Propaccess("id.domain");
+	public static Propaccess docKey = new Propaccess("doc");
 
 	// Variable resolution constants
 	public static final String VariableStart = "${";

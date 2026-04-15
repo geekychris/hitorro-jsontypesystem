@@ -48,7 +48,7 @@ import java.util.Map;
  * Includes helper methods to build extra NGP files (the nutch model). See LanguageId#buildModels
  */
 public class LanguageId {
-	public static final FileExtension TxtExt = new FileExtension("txt", true);
+	public static FileExtension TxtExt = new FileExtension("txt", true);
 	protected static ThreadLocal<LanguageId> langData = new ThreadLocal();
 	private final List<NGramProfile> profiles = new ArrayList();
 

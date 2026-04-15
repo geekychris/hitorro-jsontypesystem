@@ -26,12 +26,12 @@ import opennlp.tools.doccat.DoccatModel;
 
 
 public class AnswerTypeClassifier extends BaseClassifier {
-    public static String shortName[] = {"P", "L", "O", "T",
+    public static final String shortName[] = {"P", "L", "O", "T",
             "R", "M", "C", "A",
             "D", "F", "W", "B",
             "X"};
 
-    public static String longName[] = {"Person", "Location", "Organization", "Time Point",
+    public static final String longName[] = {"Person", "Location", "Organization", "Time Point",
             "Duration", "Money", "Percent", "Amount",
             "Distance", "Description", "Title", "Definition",
             "Other"};

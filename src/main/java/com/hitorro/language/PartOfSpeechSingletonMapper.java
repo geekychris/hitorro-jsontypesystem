@@ -30,7 +30,7 @@ import java.io.IOException;
 
 
 public class PartOfSpeechSingletonMapper extends BaseMapper<IsoLanguage, PartOfSpeech> {
-	public static final HashCache<IsoLanguage, PoolContainer<IsoLanguage, PartOfSpeech>> singleton = HashCache.getPooledCache("POS Singleton", 20, new PartOfSpeechSingletonMapper());
+	public static HashCache<IsoLanguage, PoolContainer<IsoLanguage, PartOfSpeech>> singleton = HashCache.getPooledCache("POS Singleton", 20, new PartOfSpeechSingletonMapper());
 
 	public PartOfSpeechSingletonMapper() {
 	}

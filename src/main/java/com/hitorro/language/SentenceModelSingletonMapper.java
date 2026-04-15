@@ -28,7 +28,7 @@ import opennlp.tools.sentdetect.SentenceModel;
 
 public class SentenceModelSingletonMapper extends BaseMapper<IsoLanguage, SentenceModel> {
 	public static final String EventName = "sentencemodelsingleton";
-	public static final HashCache<IsoLanguage, SentenceModel> singleton = new HashCache(EventName, new SentenceModelSingletonMapper());
+	public static HashCache<IsoLanguage, SentenceModel> singleton = new HashCache(EventName, new SentenceModelSingletonMapper());
 
 
 	public SentenceModelSingletonMapper() {

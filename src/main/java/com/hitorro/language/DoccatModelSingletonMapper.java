@@ -27,9 +27,9 @@ import opennlp.tools.doccat.DoccatModel;
 
 
 public class DoccatModelSingletonMapper extends BaseMapper<IsoLanguage, DoccatModel> {
-	public static final HashCache<IsoLanguage, DoccatModel> questionclassifier = new HashCache<IsoLanguage, DoccatModel>("doccat-questions", new DoccatModelSingletonMapper("questions"));
-	public static final HashCache<IsoLanguage, DoccatModel> answertypeclassifier = new HashCache<IsoLanguage, DoccatModel>("doccat-answertype", new DoccatModelSingletonMapper("answertype"));
-	public static final HashCache<IsoLanguage, DoccatModel> questioncontextlassifier = new HashCache<IsoLanguage, DoccatModel>("doccat-question-category", new DoccatModelSingletonMapper("question-category"));
+	public static HashCache<IsoLanguage, DoccatModel> questionclassifier = new HashCache<IsoLanguage, DoccatModel>("doccat-questions", new DoccatModelSingletonMapper("questions"));
+	public static HashCache<IsoLanguage, DoccatModel> answertypeclassifier = new HashCache<IsoLanguage, DoccatModel>("doccat-answertype", new DoccatModelSingletonMapper("answertype"));
+	public static HashCache<IsoLanguage, DoccatModel> questioncontextlassifier = new HashCache<IsoLanguage, DoccatModel>("doccat-question-category", new DoccatModelSingletonMapper("question-category"));
 
 	private final String cat;
 

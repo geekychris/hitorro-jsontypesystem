@@ -30,7 +30,7 @@ import com.hitorro.util.json.keys.JsonInitableProperty;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 
 public class DynamicMapper extends DynamicFieldMapper {
-    public static final JsonInitableProperty<JsonInitableMapper<JsonNode, JsonNode>> dynamicFieldMapperKey = new JsonInitableProperty("mapper", "", null, JsonInitableMapper.class, null);
+    public static JsonInitableProperty<JsonInitableMapper<JsonNode, JsonNode>> dynamicFieldMapperKey = new JsonInitableProperty("mapper", "", null, JsonInitableMapper.class, null);
     private JsonInitableMapper<JsonNode, JsonNode> mapper;
     @Override
     public boolean init(final JsonNode node) {

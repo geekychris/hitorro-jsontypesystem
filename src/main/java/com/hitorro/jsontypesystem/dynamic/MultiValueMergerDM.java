@@ -29,8 +29,8 @@ import com.hitorro.util.json.keys.propaccess.Propaccess;
 
 //ht.jsontypesystem.dynamic.MultiValueMergerDM
 public class MultiValueMergerDM extends DynamicFieldMapper {
-    public static final StringProperty separatorKey = new StringProperty("seperator", "", ":");
-    public static final StringProperty nullValueKey = new StringProperty("null", "", "null");
+    public static StringProperty separatorKey = new StringProperty("seperator", "", ":");
+    public static StringProperty nullValueKey = new StringProperty("null", "", "null");
 
     private String nullValue;
     private String seperator;

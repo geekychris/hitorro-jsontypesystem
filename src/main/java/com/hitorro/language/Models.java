@@ -38,26 +38,26 @@ import opennlp.tools.tokenize.TokenizerModel;
 import java.io.IOException;
 
 public class Models {
-    public static final HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> person = new HashCache(new NameFinderMapper("person"));
-    public static final HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> organization = new HashCache(new NameFinderMapper("organization"));
-    public static final HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> location = new HashCache(new NameFinderMapper("location"));
-    public static final HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> date = new HashCache(new NameFinderMapper("date"));
-    public static final HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> money = new HashCache(new NameFinderMapper("money"));
+    public static HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> person = new HashCache(new NameFinderMapper("person"));
+    public static HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> organization = new HashCache(new NameFinderMapper("organization"));
+    public static HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> location = new HashCache(new NameFinderMapper("location"));
+    public static HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> date = new HashCache(new NameFinderMapper("date"));
+    public static HashCache<com.hitorro.language.IsoLanguage, TokenNameFinderModel> money = new HashCache(new NameFinderMapper("money"));
     /**
      * Document Categorization singletons
      */
 
-    public static final PooledObjectCache<com.hitorro.language.IsoLanguage, com.hitorro.language.SentenceSegmenter> sentenceDetectorSingleton = new PooledObjectCache(10, false, null, new SentenceDetectorMapper());
-    public static final PooledObjectCache<com.hitorro.language.IsoLanguage, com.hitorro.language.PartOfSpeech> posPoolSingleton = new PooledObjectCacheWrapper(10, false, null, new POSPoolMapper());
-    public static final HashCache<com.hitorro.language.IsoLanguage, DoccatModel> answertypeclassifier = new HashCache(new DocumentCatMapper("answertype"));
+    public static PooledObjectCache<com.hitorro.language.IsoLanguage, com.hitorro.language.SentenceSegmenter> sentenceDetectorSingleton = new PooledObjectCache(10, false, null, new SentenceDetectorMapper());
+    public static PooledObjectCache<com.hitorro.language.IsoLanguage, com.hitorro.language.PartOfSpeech> posPoolSingleton = new PooledObjectCacheWrapper(10, false, null, new POSPoolMapper());
+    public static HashCache<com.hitorro.language.IsoLanguage, DoccatModel> answertypeclassifier = new HashCache(new DocumentCatMapper("answertype"));
     // Though we pass in a language currently we only have an english wordnet wrapper.
-    public static final HashCache<com.hitorro.language.IsoLanguage, com.hitorro.language.WordnetPool> wordnetWrapper = new HashCache(new WordNetWrapperMapper());
-    public static final HashCache<com.hitorro.language.IsoLanguage, POSModel> posModel = new HashCache<com.hitorro.language.IsoLanguage, POSModel>(new PosModelMapper()) {
+    public static HashCache<com.hitorro.language.IsoLanguage, com.hitorro.language.WordnetPool> wordnetWrapper = new HashCache(new WordNetWrapperMapper());
+    public static HashCache<com.hitorro.language.IsoLanguage, POSModel> posModel = new HashCache<com.hitorro.language.IsoLanguage, POSModel>(new PosModelMapper()) {
         public POSModel get(com.hitorro.language.IsoLanguage key) {
             return super.get(key);
         }
     };
-    public static final PooledObjectCache<com.hitorro.language.IsoLanguage, BaseClassifier> answerTypeSingleton = new PooledObjectCache(10, false, null, new AnswerTypeMapper());
+    public static PooledObjectCache<com.hitorro.language.IsoLanguage, BaseClassifier> answerTypeSingleton = new PooledObjectCache(10, false, null, new AnswerTypeMapper());
     public static BaseMapper<com.hitorro.language.IsoLanguage, TokenizerModel> tokenizerMapper = new BaseMapper<com.hitorro.language.IsoLanguage, TokenizerModel>() {
         public TokenizerModel apply(com.hitorro.language.IsoLanguage key) {
             return key.getTokenizerModel();
@@ -66,19 +66,19 @@ public class Models {
     /*
      *
      */
-    public static final HashCache<com.hitorro.language.IsoLanguage, TokenizerModel> tokenizerSingleton = new HashCache(tokenizerMapper);
+    public static HashCache<com.hitorro.language.IsoLanguage, TokenizerModel> tokenizerSingleton = new HashCache(tokenizerMapper);
     public static BaseMapper<com.hitorro.language.IsoLanguage, SentenceModel> sentenceModelMapper = new BaseMapper<com.hitorro.language.IsoLanguage, SentenceModel>() {
         public SentenceModel apply(com.hitorro.language.IsoLanguage key) {
             return key.getSentenceModel();
         }
     };
-    public static final HashCache<com.hitorro.language.IsoLanguage, SentenceModel> sentenceModelSingleton = new HashCache(sentenceModelMapper);
+    public static HashCache<com.hitorro.language.IsoLanguage, SentenceModel> sentenceModelSingleton = new HashCache(sentenceModelMapper);
     public static BaseMapper<com.hitorro.language.IsoLanguage, ParserModel> parserModelMapper = new BaseMapper<com.hitorro.language.IsoLanguage, ParserModel>() {
         public ParserModel apply(com.hitorro.language.IsoLanguage key) {
             return key.getParserModel();
         }
     };
-    public static final HashCache<com.hitorro.language.IsoLanguage, ParserModel> parserSingleton = new HashCache(parserModelMapper);
+    public static HashCache<com.hitorro.language.IsoLanguage, ParserModel> parserSingleton = new HashCache(parserModelMapper);
     /**
      * name finders
      */
@@ -163,7 +163,7 @@ public class Models {
         }
     }
 
-    public static final class AnswerTypeMapper extends BaseMapper<com.hitorro.language.IsoLanguage, BaseClassifier> {
+    public static class AnswerTypeMapper extends BaseMapper<com.hitorro.language.IsoLanguage, BaseClassifier> {
         public BaseClassifier apply(com.hitorro.language.IsoLanguage key) {
             return new AnswerTypeClassifier(Models.answertypeclassifier.get(key), key);
         }

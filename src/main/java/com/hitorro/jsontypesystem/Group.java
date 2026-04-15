@@ -32,10 +32,10 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public class Group extends BaseT {
-    public static final StringProperty methodKey = new StringProperty("method", "", null);
-    public static final BooleanProperty defaultKey = new BooleanProperty("isdefault", "", false);
-    public static final StringProperty tagKey = new StringProperty("", "", null);
-    public static final CollectionProperty<String> tagsKey = new CollectionProperty<>("tags", "", new ArrayList<>(), tagKey);
+    public static StringProperty methodKey = new StringProperty("method", "", null);
+    public static BooleanProperty defaultKey = new BooleanProperty("isdefault", "", false);
+    public static StringProperty tagKey = new StringProperty("", "", null);
+    public static CollectionProperty<String> tagsKey = new CollectionProperty<>("tags", "", new ArrayList<>(), tagKey);
 
     private List<String> tags;
 

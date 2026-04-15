@@ -41,8 +41,8 @@ import java.util.Set;
  * PartOfSpeachSingleton and SentenceDetectorSingleton.
  */
 public class Iso639Table extends Iso639TableBase {
-	public static final FileProperty StemmersTable = new FileProperty("text.analyzer.stemmers", "location of where the ", "${ht_data}/text/stemmers/stemmers.csv");
-	public static final FileProperty IsoLangTable = new FileProperty("i18n.langs", "location of where the ", "${ht_data}/iso639.psv");
+	public static FileProperty StemmersTable = new FileProperty("text.analyzer.stemmers", "location of where the ", "${ht_data}/text/stemmers/stemmers.csv");
+	public static FileProperty IsoLangTable = new FileProperty("i18n.langs", "location of where the ", "${ht_data}/iso639.psv");
 	private static Iso639Table instance;
 	public static IsoLanguage english = getInstance().getRow("en");
 	public static IsoLanguage german = getInstance().getRow("de");

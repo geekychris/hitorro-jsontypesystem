@@ -30,7 +30,7 @@ import java.util.function.Predicate;
 
 public
 class EnrichExecutionBuilderMapper extends BaseProjectionFactoryMapper<EnrichAction> {
-    public static final BaseMapper<Type, ExecutionBuilder> me = new EnrichExecutionBuilderMapper();
+    public static BaseMapper<Type, ExecutionBuilder> me = new EnrichExecutionBuilderMapper();
     public EnrichExecutionBuilderMapper() {
         predicate = (Predicate<BaseT>) GroupNameFilter.enrichFilter;
     }

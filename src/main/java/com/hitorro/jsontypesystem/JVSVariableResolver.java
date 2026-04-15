@@ -32,7 +32,7 @@ import com.hitorro.util.json.keys.propaccess.PropaccessError;
 
 public class JVSVariableResolver {
 
-	public static final JsonNode resolveVariableAux(TextNode e, JVS master) throws PropaccessError {
+	public static JsonNode resolveVariableAux(TextNode e, JVS master) throws PropaccessError {
 		String value = e.textValue();
 		JsonNode n = resolveTextVariableAux(value, master, null);
 		if (n == null) {
@@ -44,7 +44,7 @@ public class JVSVariableResolver {
 	/**
 	 * Resolve a string that contains a HiTorro variable
 	 */
-	public static final JsonNode resolveTextVariableAux(String value, JVS master, JVS overide) throws PropaccessError {
+	public static JsonNode resolveTextVariableAux(String value, JVS master, JVS overide) throws PropaccessError {
 		StringBuilder builder = new StringBuilder();
 
 		if (value == null) {

@@ -78,7 +78,7 @@ public record TypeVersion(String name, String version) implements Comparable<Typ
 	 * - Added fields → minor (backward compatible addition)
 	 * - No changes → "none"
 	 */
-	public static String suggestedBump(JsonNode oldDef, JsonNode newDef) {
+	public static final String suggestedBump(JsonNode oldDef, JsonNode newDef) {
 		List<TypeDiff.Change> changes = TypeDiff.diff(oldDef, newDef);
 		if (changes.isEmpty()) return "none";
 

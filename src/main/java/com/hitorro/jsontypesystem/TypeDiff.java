@@ -83,7 +83,7 @@ public class TypeDiff {
 	/**
 	 * Produce a human-readable diff report.
 	 */
-	public static String report(JsonNode oldDef, JsonNode newDef) {
+	public static final String report(JsonNode oldDef, JsonNode newDef) {
 		var changes = diff(oldDef, newDef);
 		if (changes.isEmpty()) {
 			return "No changes between type definitions.";
@@ -103,7 +103,7 @@ public class TypeDiff {
 	 * Generate a Groovy Data Mapper migration script that transforms documents
 	 * from the old type to the new type.
 	 */
-	public static String generateMigrationScript(JsonNode oldDef, JsonNode newDef) {
+	public static final String generateMigrationScript(JsonNode oldDef, JsonNode newDef) {
 		var changes = diff(oldDef, newDef);
 		String oldName = oldDef.has("name") ? oldDef.get("name").asText() : "old";
 		String newName = newDef.has("name") ? newDef.get("name").asText() : "new";
