@@ -254,6 +254,132 @@ class JVSValidatorTest {
 	}
 
 	@Nested
+	@DisplayName("End-to-end: real Type object through JsonTypeSystem loading")
+	class EndToEndWithLoadedType {
+
+		/**
+		 * Build a real Type in-memory (no on-disk config, no HT_HOME dependency) so we can
+		 * prove constraints survive the JsonTypeSystem loading path — not just the raw
+		 * JsonNode overload used elsewhere in this test class.
+		 */
+		private Type loadedType(String typeJson) {
+			JsonNode node = typeDef(typeJson);
+			Type t = new Type();
+			t.init(node);
+			return t;
+		}
+
+		@Test
+		@DisplayName("validate(JVS, Type) enforces constraints on a fully-loaded Type")
+		void loadedTypeEnforcesConstraints() {
+			Type person = loadedType("""
+					{
+					  "name": "person",
+					  "fields": [
+					    {"name": "id",    "type": "core_string", "format": "uuid"},
+					    {"name": "email", "type": "core_string", "format": "email"},
+					    {"name": "age",   "type": "core_long",   "minimum": 0, "maximum": 150},
+					    {"name": "status","type": "core_string", "enum": ["active", "banned"]}
+					  ]
+					}""");
+
+			// Sanity: constraints survived the Type.init() round-trip via getMetaNode().
+			JsonNode fields = person.getMetaNode().get("fields");
+			assertThat(fields.get(0).get("format").asText()).isEqualTo("uuid");
+			assertThat(fields.get(1).get("format").asText()).isEqualTo("email");
+			assertThat(fields.get(2).get("minimum").asInt()).isEqualTo(0);
+			assertThat(fields.get(3).get("enum").isArray()).isTrue();
+
+			JVS clean = JVS.read("""
+					{
+					  "id":     "550e8400-e29b-41d4-a716-446655440000",
+					  "email":  "chris@hitorro.com",
+					  "age":    42,
+					  "status": "active"
+					}""");
+			assertThat(JVSValidator.validate(clean, person))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+
+			JVS dirty = JVS.read("""
+					{
+					  "id":     "not-a-uuid",
+					  "email":  "definitely@ not an email",
+					  "age":    200,
+					  "status": "trashed"
+					}""");
+			List<JVSValidator.Violation> vs = JVSValidator.validate(dirty, person);
+			assertThat(vs).anyMatch(v -> v.path().equals("id")     && v.message().contains("UUID"));
+			assertThat(vs).anyMatch(v -> v.path().equals("email")  && v.message().contains("email"));
+			assertThat(vs).anyMatch(v -> v.path().equals("age")    && v.message().contains("maximum"));
+			assertThat(vs).anyMatch(v -> v.path().equals("status") && v.message().contains("enum"));
+		}
+
+		@Test
+		@DisplayName("Handing a JVS directly with a full document-type example works")
+		void fullDocumentExample() {
+			Type article = loadedType("""
+					{
+					  "name": "article",
+					  "fields": [
+					    {"name": "slug",     "type": "core_string",
+					     "pattern": "^[a-z0-9-]+$", "minLength": 3, "maxLength": 64},
+					    {"name": "author",   "type": "core_string", "minLength": 1},
+					    {"name": "title",    "type": "core_string", "minLength": 1, "maxLength": 200},
+					    {"name": "published","type": "core_string", "format": "date-time"},
+					    {"name": "wordCount","type": "core_long",   "minimum": 0},
+					    {"name": "canonical","type": "core_string", "format": "uri"},
+					    {"name": "status",   "type": "core_string",
+					     "enum": ["draft", "published", "archived"]}
+					  ]
+					}""");
+
+			JVS goodArticle = JVS.read("""
+					{
+					  "slug":      "hello-world",
+					  "author":    "chris",
+					  "title":     "Hello, world",
+					  "published": "2026-07-15T09:00:00Z",
+					  "wordCount": 1247,
+					  "canonical": "https://example.com/hello-world",
+					  "status":    "published"
+					}""");
+			assertThat(JVSValidator.validate(goodArticle, article))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+
+			JVS badArticle = JVS.read("""
+					{
+					  "slug":      "Hello World",
+					  "author":    "",
+					  "title":     "OK",
+					  "published": "last Tuesday",
+					  "wordCount": -5,
+					  "canonical": "not a url",
+					  "status":    "trashed"
+					}""");
+			List<JVSValidator.Violation> vs = JVSValidator.validate(badArticle, article);
+			assertThat(vs).anyMatch(v -> v.path().equals("slug")      && v.message().contains("pattern"));
+			assertThat(vs).anyMatch(v -> v.path().equals("author")    && v.message().contains("minLength"));
+			assertThat(vs).anyMatch(v -> v.path().equals("published") && v.message().contains("date-time"));
+			assertThat(vs).anyMatch(v -> v.path().equals("wordCount") && v.message().contains("minimum"));
+			assertThat(vs).anyMatch(v -> v.path().equals("canonical")
+					&& (v.message().contains("URI") || v.message().contains("scheme")));
+			assertThat(vs).anyMatch(v -> v.path().equals("status")    && v.message().contains("enum"));
+		}
+
+		@Test
+		@DisplayName("report(JVS, Type) formats violations on a loaded Type")
+		void reportViaLoadedType() {
+			Type contact = loadedType("""
+					{"name": "contact", "fields": [
+					    {"name": "email", "type": "core_string", "format": "email"}
+					]}""");
+			String report = JVSValidator.report(JVS.read("{\"email\":\"nope\"}"), contact);
+			assertThat(report).contains("email");
+			assertThat(report).contains("contact");
+		}
+	}
+
+	@Nested
 	@DisplayName("Constraint validation")
 	class ConstraintValidation {
 
