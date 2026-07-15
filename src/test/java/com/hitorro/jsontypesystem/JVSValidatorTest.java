@@ -252,4 +252,152 @@ class JVSValidatorTest {
 			assertThat(report).contains("b");
 		}
 	}
+
+	@Nested
+	@DisplayName("Constraint validation")
+	class ConstraintValidation {
+
+		@Test
+		@DisplayName("minLength / maxLength on string fields")
+		void stringLengthBounds() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "code", "type": "core_string", "minLength": 3, "maxLength": 8}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"code\":\"ab\"}"), def))
+					.anyMatch(v -> v.message().contains("minLength"));
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"code\":\"way too long\"}"), def))
+					.anyMatch(v -> v.message().contains("maxLength"));
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"code\":\"fine\"}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+		}
+
+		@Test
+		@DisplayName("pattern must match full value")
+		void patternMatch() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "sku", "type": "core_string", "pattern": "^[A-Z]{3}-[0-9]{4}$"}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"sku\":\"ABC-1234\"}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"sku\":\"abc-1234\"}"), def))
+					.anyMatch(v -> v.message().contains("pattern"));
+		}
+
+		@Test
+		@DisplayName("enum rejects values outside the allowed set")
+		void enumMembership() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "status", "type": "core_string", "enum": ["draft", "published", "archived"]}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"status\":\"published\"}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"status\":\"trashed\"}"), def))
+					.anyMatch(v -> v.message().contains("enum"));
+		}
+
+		@Test
+		@DisplayName("minimum / maximum on numeric fields")
+		void numericBounds() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "age", "type": "core_long", "minimum": 0, "maximum": 150}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"age\":42}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"age\":-1}"), def))
+					.anyMatch(v -> v.message().contains("minimum"));
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"age\":200}"), def))
+					.anyMatch(v -> v.message().contains("maximum"));
+		}
+
+		@Test
+		@DisplayName("format=email flags obvious non-emails")
+		void formatEmail() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "contact", "type": "core_string", "format": "email"}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"contact\":\"chris@hitorro.com\"}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"contact\":\"not-an-email\"}"), def))
+					.anyMatch(v -> v.message().contains("email"));
+		}
+
+		@Test
+		@DisplayName("format=date-time enforces ISO-8601")
+		void formatDateTime() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "ts", "type": "core_string", "format": "date-time"}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"ts\":\"2026-07-15T09:00:00Z\"}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"ts\":\"yesterday\"}"), def))
+					.anyMatch(v -> v.message().contains("date-time"));
+		}
+
+		@Test
+		@DisplayName("format=uri requires an absolute URI (scheme present)")
+		void formatUri() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "url", "type": "core_string", "format": "uri"}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"url\":\"https://example.com/x\"}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"url\":\"just a path/nothing\"}"), def))
+					.anyMatch(v -> v.message().contains("URI") || v.message().contains("scheme"));
+		}
+
+		@Test
+		@DisplayName("format=uuid checks canonical form")
+		void formatUuid() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "id", "type": "core_string", "format": "uuid"}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(
+					JVS.read("{\"id\":\"550e8400-e29b-41d4-a716-446655440000\"}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"id\":\"not-a-uuid\"}"), def))
+					.anyMatch(v -> v.message().contains("UUID"));
+		}
+
+		@Test
+		@DisplayName("Unknown format values are ignored (forward-compat)")
+		void unknownFormatIgnored() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "custom", "type": "core_string", "format": "hitorro-locale"}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"custom\":\"anything\"}"), def))
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+		}
+
+		@Test
+		@DisplayName("Malformed regex in type-def is reported, not silently swallowed")
+		void malformedPattern() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "x", "type": "core_string", "pattern": "["}
+					]}""");
+			assertThat(JVSValidator.validateAgainstDefinition(JVS.read("{\"x\":\"abc\"}"), def))
+					.anyMatch(v -> v.message().contains("invalid pattern"));
+		}
+
+		@Test
+		@DisplayName("Constraints on absent fields are ignored (missing-field is separate)")
+		void constraintsSkipMissing() {
+			JsonNode def = typeDef("""
+					{"name": "t", "fields": [
+						{"name": "opt", "type": "core_string", "minLength": 5}
+					]}""");
+			var vs = JVSValidator.validateAgainstDefinition(JVS.read("{}"), def);
+			// missing warning is fine; constraint ERROR is not
+			assertThat(vs).noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+		}
+	}
 }

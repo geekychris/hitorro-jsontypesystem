@@ -124,6 +124,12 @@ public class JVSValidator {
 			if (fieldTypeName != null && !isVector) {
 				checkPrimitiveType(path, value, fieldTypeName, violations);
 			}
+
+			// Constraint checks (minLength/maxLength/pattern/enum/minimum/maximum/format).
+			// Applied to scalars only — vector element constraints are a future enhancement.
+			if (!isVector) {
+				FieldConstraints.check(path, value, fieldDef, violations);
+			}
 		}
 	}
 

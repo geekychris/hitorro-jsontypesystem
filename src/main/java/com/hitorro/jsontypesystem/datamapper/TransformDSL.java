@@ -637,6 +637,134 @@ public abstract class TransformDSL extends Script {
 		}
 	}
 
+	// --- Convenience: conditional delete, array transform, default, coalesce ---
+
+	/**
+	 * Delete a target path only if the closure evaluates truthy against the current value at
+	 * {@code path}. The closure receives the value as a {@link JsonNode} (may be {@code null}).
+	 *
+	 * <pre>{@code
+	 * deleteIf("target.status") { it?.textValue() == "draft" }
+	 * }</pre>
+	 */
+	public void deleteIf(String path, Closure<?> pred) {
+		JsonNode current;
+		try {
+			String actualPath = path.startsWith("target.") ? path.substring(7) : path;
+			current = ctx.target.get(actualPath);
+		} catch (PropaccessError e) {
+			return; // nothing to delete
+		}
+		pred.setDelegate(this);
+		pred.setResolveStrategy(Closure.DELEGATE_FIRST);
+		Object result = pred.call(current);
+		if (isTruthy(result)) {
+			delete(path);
+		}
+	}
+
+	/**
+	 * Element-wise transform over an array at {@code path}. The closure is invoked once per
+	 * element and its return value replaces the element. The path is resolved against the
+	 * target by default (or source if prefixed).
+	 *
+	 * <pre>{@code
+	 * mapArray("target.tags") { tag -> tag.textValue().toLowerCase() }
+	 * }</pre>
+	 */
+	public void mapArray(String path, Closure<?> transform) {
+		try {
+			JVS root;
+			String actualPath;
+			if (path.startsWith("source.")) {
+				root = ctx.source;
+				actualPath = path.substring(7);
+			} else if (path.startsWith("target.")) {
+				root = ctx.target;
+				actualPath = path.substring(7);
+			} else {
+				root = ctx.target;
+				actualPath = path;
+			}
+			JsonNode existing = root.get(actualPath);
+			if (existing == null || !existing.isArray()) return;
+			ArrayNode arr = (ArrayNode) existing;
+			transform.setDelegate(this);
+			transform.setResolveStrategy(Closure.DELEGATE_FIRST);
+			ArrayNode replacement = JsonNodeFactory.instance.arrayNode();
+			for (int i = 0; i < arr.size(); i++) {
+				Object mapped = transform.call(arr.get(i));
+				replacement.add(toJsonNode(mapped));
+			}
+			root.set(actualPath, replacement);
+		} catch (PropaccessError e) {
+			throw new RuntimeException("mapArray failed on " + path, e);
+		}
+	}
+
+	/**
+	 * Set a default value at {@code path} only if it is currently null or missing. Existing
+	 * non-null values are left untouched.
+	 *
+	 * <pre>{@code
+	 * ifMissing "target.status", "draft"
+	 * }</pre>
+	 */
+	public void ifMissing(String path, Object defaultValue) {
+		try {
+			String actualPath = path.startsWith("target.") ? path.substring(7) : path;
+			JsonNode current = ctx.target.get(actualPath);
+			if (current == null || current.isNull()) {
+				set(path, defaultValue);
+			}
+		} catch (PropaccessError e) {
+			// Target path doesn't resolve — treat as missing and set the default.
+			set(path, defaultValue);
+		}
+	}
+
+	/**
+	 * Return the value of the first path whose resolved value is non-null. Paths are checked
+	 * left-to-right and may be either {@code source.*} or {@code target.*}. Returns {@code null}
+	 * if every candidate is absent.
+	 *
+	 * <pre>{@code
+	 * set "target.display", coalesce("source.nickname", "source.name", "target.fallback")
+	 * }</pre>
+	 */
+	public JsonNode coalesce(String... paths) {
+		for (String p : paths) {
+			JsonNode v;
+			if (p.startsWith("source.")) v = source(p.substring(7));
+			else if (p.startsWith("target.")) v = target(p.substring(7));
+			else v = source(p); // default to source, consistent with the rest of the DSL
+			if (v != null && !v.isNull()) return v;
+		}
+		return null;
+	}
+
+	private static boolean isTruthy(Object o) {
+		if (o == null) return false;
+		if (o instanceof Boolean b) return b;
+		if (o instanceof Number n) return n.doubleValue() != 0.0;
+		if (o instanceof String s) return !s.isEmpty();
+		if (o instanceof JsonNode j) return !j.isNull() && !j.isMissingNode()
+				&& (!j.isTextual() || !j.textValue().isEmpty())
+				&& (!j.isBoolean() || j.booleanValue());
+		return true;
+	}
+
+	private static JsonNode toJsonNode(Object o) {
+		if (o == null) return JsonNodeFactory.instance.nullNode();
+		if (o instanceof JsonNode j) return j;
+		if (o instanceof String s) return JsonNodeFactory.instance.textNode(s);
+		if (o instanceof Integer i) return JsonNodeFactory.instance.numberNode(i);
+		if (o instanceof Long l) return JsonNodeFactory.instance.numberNode(l);
+		if (o instanceof Double d) return JsonNodeFactory.instance.numberNode(d);
+		if (o instanceof Boolean b) return JsonNodeFactory.instance.booleanNode(b);
+		return JsonNodeFactory.instance.textNode(o.toString());
+	}
+
 	// --- Fluent copy builder ---
 
 	public static class CopyBuilder {
