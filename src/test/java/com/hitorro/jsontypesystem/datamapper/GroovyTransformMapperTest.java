@@ -678,4 +678,95 @@ class GroovyTransformMapperTest {
 			assertThat(result.getString("name")).contains(" ");
 		}
 	}
+
+	@Nested
+	@DisplayName("DSL fill-ins: deleteIf, mapArray, ifMissing, coalesce")
+	class FillIns {
+
+		@Test
+		@DisplayName("deleteIf removes the target path when the closure is truthy")
+		void deleteIfTruthy() {
+			GroovyTransformMapper mapper = GroovyTransformMapper.fromString("""
+					copyAll()
+					deleteIf("target.status") { it?.textValue() == "draft" }
+					""", generators());
+			JVS r1 = mapper.apply(JVS.read("{\"status\":\"draft\",\"title\":\"x\"}"));
+			assertThat(r1.getString("status")).isNull();
+			assertThat(r1.getString("title")).isEqualTo("x");
+
+			GroovyTransformMapper mapper2 = GroovyTransformMapper.fromString("""
+					copyAll()
+					deleteIf("target.status") { it?.textValue() == "draft" }
+					""", generators());
+			JVS r2 = mapper2.apply(JVS.read("{\"status\":\"published\"}"));
+			assertThat(r2.getString("status")).isEqualTo("published");
+		}
+
+		@Test
+		@DisplayName("mapArray transforms each element in place")
+		void mapArrayLowercase() {
+			GroovyTransformMapper mapper = GroovyTransformMapper.fromString("""
+					copyAll()
+					mapArray("target.tags") { tag -> tag.textValue().toLowerCase() }
+					""", generators());
+			JVS r = mapper.apply(JVS.read("{\"tags\":[\"Foo\",\"BAR\",\"Baz\"]}"));
+			JsonNode tags = r.getJsonNode().get("tags");
+			assertThat(tags).isNotNull();
+			assertThat(tags.isArray()).isTrue();
+			assertThat(tags.get(0).textValue()).isEqualTo("foo");
+			assertThat(tags.get(1).textValue()).isEqualTo("bar");
+			assertThat(tags.get(2).textValue()).isEqualTo("baz");
+		}
+
+		@Test
+		@DisplayName("mapArray no-ops when the path is missing or not an array")
+		void mapArrayMissing() {
+			GroovyTransformMapper mapper = GroovyTransformMapper.fromString("""
+					copyAll()
+					mapArray("target.absent") { it -> "should not run" }
+					""", generators());
+			JVS r = mapper.apply(JVS.read("{\"other\":\"x\"}"));
+			assertThat(r.getString("other")).isEqualTo("x");
+		}
+
+		@Test
+		@DisplayName("ifMissing sets the default only when the target is null/missing")
+		void ifMissingBehaviour() {
+			GroovyTransformMapper m1 = GroovyTransformMapper.fromString("""
+					copyAll()
+					ifMissing "target.status", "draft"
+					""", generators());
+			JVS r1 = m1.apply(JVS.read("{}"));
+			assertThat(r1.getString("status")).isEqualTo("draft");
+
+			GroovyTransformMapper m2 = GroovyTransformMapper.fromString("""
+					copyAll()
+					ifMissing "target.status", "draft"
+					""", generators());
+			JVS r2 = m2.apply(JVS.read("{\"status\":\"published\"}"));
+			assertThat(r2.getString("status")).isEqualTo("published");
+		}
+
+		@Test
+		@DisplayName("coalesce picks the first non-null value across paths")
+		void coalescePicksFirst() {
+			GroovyTransformMapper mapper = GroovyTransformMapper.fromString("""
+					copyAll()
+					set "target.display", coalesce("source.nickname", "source.name")
+					""", generators());
+			JVS r1 = mapper.apply(JVS.read("{\"nickname\":\"Chris\",\"name\":\"Christopher\"}"));
+			assertThat(r1.getString("display")).isEqualTo("Chris");
+		}
+
+		@Test
+		@DisplayName("coalesce falls through to later paths when earlier ones are missing")
+		void coalesceFallthrough() {
+			GroovyTransformMapper mapper = GroovyTransformMapper.fromString("""
+					copyAll()
+					set "target.display", coalesce("source.nickname", "source.name")
+					""", generators());
+			JVS r = mapper.apply(JVS.read("{\"name\":\"Christopher\"}"));
+			assertThat(r.getString("display")).isEqualTo("Christopher");
+		}
+	}
 }

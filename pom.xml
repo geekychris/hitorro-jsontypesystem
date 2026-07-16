@@ -146,6 +146,11 @@
                     </includes>
                     <systemPropertyVariables>
                         <HT_HOME>${session.executionRootDirectory}</HT_HOME>
+                        <!-- HT_BIN drives Env.getBinConfigBaseFile(), which the JsonTypeSystem
+                             HashCache anchors on at class-load time. Without this, on-disk
+                             type loading (config/types/*.json) silently returns null in tests
+                             because the classpath-fallback resolver can't find a config.txt. -->
+                        <HT_BIN>${session.executionRootDirectory}</HT_BIN>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
