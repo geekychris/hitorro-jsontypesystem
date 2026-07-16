@@ -22,14 +22,21 @@
 package com.hitorro.jsontypesystem;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.hitorro.util.core.Env;
 import com.hitorro.util.json.String2JsonMapper;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @DisplayName("JVSValidator Tests")
 class JVSValidatorTest {
@@ -250,6 +257,113 @@ class JVSValidatorTest {
 			String report = JVSValidator.reportAgainstDefinition(doc, def);
 			assertThat(report).contains("a");
 			assertThat(report).contains("b");
+		}
+	}
+
+	@Nested
+	@DisplayName("End-to-end: type loaded from disk via JsonTypeSystem")
+	class LoadedFromConfigDir {
+
+		/**
+		 * Full-pipeline coverage: write a constrained type-def file into the runtime
+		 * config directory, load it through {@link JsonTypeSystem#getType(String)},
+		 * and validate a JVS against the resulting Type.
+		 *
+		 * <p>Runs only when {@code $HT_HOME/config/types/} exists and is writable.
+		 * Surefire sets {@code HT_HOME} to {@code session.executionRootDirectory}, so
+		 * this passes when the suite runs from the parent repo (the usual path).
+		 */
+		private static final String TYPE_NAME = "demo_constrained_person";
+		private static Path typeFile;
+
+		@BeforeAll
+		static void writeConstrainedTypeFile() throws Exception {
+			// JsonTypeSystem's static cache is built off of Env.getBinConfigBaseFile() at
+			// class-load time. If HT_BIN wasn't set before that first class-load, the cache
+			// points somewhere useless and getType always returns null. To make this test
+			// deterministic, we find the real config/types dir that ships with the monorepo
+			// and set HT_BIN to point above it BEFORE any getType call.
+			File typesDir = null;
+			for (File candidate : new File[]{
+					new File("config/types"),                                 // CWD is monorepo root
+					new File("../config/types"),                              // CWD is a submodule
+					new File(System.getProperty("user.dir"), "config/types")
+			}) {
+				if (candidate.isDirectory() && new File(candidate, "core_string.json").isFile()) {
+					typesDir = candidate.getAbsoluteFile();
+					break;
+				}
+			}
+			assumeTrue(typesDir != null,
+					"could not locate a config/types directory containing core_string.json — " +
+							"skipping loaded-type test");
+
+			// Belt-and-braces: set HT_BIN so a caller running this class in isolation (no
+			// pom-level HT_BIN) still hits the right dir, as long as JsonTypeSystem hasn't
+			// already been class-loaded with a bad config path.
+			System.setProperty("HT_BIN", typesDir.getParentFile().getParentFile().getAbsolutePath());
+
+			// Verify JsonTypeSystem can actually resolve — if not, the static cache was
+			// pinned to a bad config dir earlier in this JVM. Skip rather than fail so
+			// running the class from a wrong CWD doesn't produce a red herring.
+			Type anchor = JsonTypeSystem.getMe().getType("core_string");
+			assumeTrue(anchor != null,
+					"JsonTypeSystem cached a bad config dir before this test class ran — skipping");
+
+			typeFile = typesDir.toPath().resolve(TYPE_NAME + ".json");
+			String json = """
+					{
+					  "name": "%s",
+					  "fields": [
+					    {"name": "email",  "type": "core_string", "format": "email"},
+					    {"name": "age",    "type": "core_long",   "minimum": 0, "maximum": 150},
+					    {"name": "status", "type": "core_string",
+					     "enum": ["active", "banned", "pending"]}
+					  ]
+					}""".formatted(TYPE_NAME);
+			Files.writeString(typeFile, json);
+		}
+
+		@AfterAll
+		static void removeConstrainedTypeFile() throws Exception {
+			if (typeFile != null) Files.deleteIfExists(typeFile);
+		}
+
+		@Test
+		@DisplayName("Type loaded from disk via JsonTypeSystem carries constraints through validation")
+		void loadedFromDiskEnforcesConstraints() {
+			assumeTrue(typeFile != null && Files.exists(typeFile), "type file setup skipped");
+
+			Type person = JsonTypeSystem.getMe().getType(TYPE_NAME);
+			assertThat(person)
+					.as("Type must be loadable from disk via JsonTypeSystem")
+					.isNotNull();
+			// Prove the file was really parsed — constraint metadata should be present
+			// on the loaded Type's metaNode (this is what JVSValidator reads).
+			JsonNode fields = person.getMetaNode().get("fields");
+			assertThat(fields.isArray()).isTrue();
+			assertThat(fields.get(1).get("maximum").asInt()).isEqualTo(150);
+
+			JVS clean = JVS.read("""
+					{
+					  "email":  "chris@hitorro.com",
+					  "age":    42,
+					  "status": "active"
+					}""");
+			assertThat(JVSValidator.validate(clean, person))
+					.as("Well-formed document should have no ERROR violations")
+					.noneMatch(v -> v.level() == JVSValidator.Level.ERROR);
+
+			JVS dirty = JVS.read("""
+					{
+					  "email":  "not-an-email",
+					  "age":    999,
+					  "status": "unknown"
+					}""");
+			List<JVSValidator.Violation> vs = JVSValidator.validate(dirty, person);
+			assertThat(vs).anyMatch(v -> v.path().equals("email")  && v.message().contains("email"));
+			assertThat(vs).anyMatch(v -> v.path().equals("age")    && v.message().contains("maximum"));
+			assertThat(vs).anyMatch(v -> v.path().equals("status") && v.message().contains("enum"));
 		}
 	}
 
