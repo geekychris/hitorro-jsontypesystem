@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2025 Chris Collins
+ * Copyright (c) 2006-2026 Chris Collins
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,29 +19,24 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.hitorro.jsontypesystem.grouppredicates;
+package com.hitorro.jsontypesystem.projections;
 
-import com.hitorro.jsontypesystem.Group;
+import com.fasterxml.jackson.databind.JsonNode;
 
-import java.util.function.Predicate;
+/**
+ * SPI for looking up referenced documents. The {@link com.hitorro.jsontypesystem.executors.MaterializeAction
+ * MaterializeAction} projection uses this to dereference {@code core_id}-shaped fields into
+ * their full target documents at read time.
+ *
+ * <p>Implementations are typically module-specific (RocksDB-backed, Solr-backed, HTTP-backed,
+ * etc.); {@link InMemoryDocumentStore} is provided for tests and small-scale in-process use.
+ */
+public interface DocumentStore {
 
-public class GroupNameFilter implements Predicate<Group> {
-    public static Predicate indexFilter       = new GroupNameFilter("index");
-    public static Predicate enrichFilter      = new GroupNameFilter("enrich");
-    public static Predicate redactFilter      = new GroupNameFilter("redact");
-    public static Predicate validateFilter    = new GroupNameFilter("validate");
-    public static Predicate fingerprintFilter = new GroupNameFilter("fingerprint");
-    public static Predicate materializeFilter = new GroupNameFilter("materialize");
-    public static Predicate i18nFilter        = new GroupNameFilter("i18n");
-    public static Predicate vectorizeFilter   = new GroupNameFilter("vectorize");
-    private String name;
-
-    public GroupNameFilter(String name) {
-        this.name = name;
-    }
-
-    @Override
-    public boolean test(final Group group) {
-        return name.equals(group.getName());
-    }
+    /**
+     * Return the document for {@code id}, or {@code null} if no document is registered. The
+     * projection engine treats {@code null} as "unresolvable" and leaves the reference field
+     * untouched — it does not throw.
+     */
+    JsonNode getDocument(String id);
 }

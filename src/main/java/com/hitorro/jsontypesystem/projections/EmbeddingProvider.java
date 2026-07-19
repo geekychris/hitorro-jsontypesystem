@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2025 Chris Collins
+ * Copyright (c) 2006-2026 Chris Collins
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,29 +19,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.hitorro.jsontypesystem.grouppredicates;
+package com.hitorro.jsontypesystem.projections;
 
-import com.hitorro.jsontypesystem.Group;
+/**
+ * SPI for producing a vector embedding of text. Used by
+ * {@link com.hitorro.jsontypesystem.executors.VectorizeAction VectorizeAction} to derive per-field
+ * vectors for semantic search / dedup / clustering.
+ *
+ * <p>Real backends (ONNX sentence-transformers, remote HTTP inference, etc.) live in caller
+ * modules; a {@link HashingEmbeddingProvider} is provided for tests and as a stable default
+ * when no real backend is configured.
+ */
+public interface EmbeddingProvider {
 
-import java.util.function.Predicate;
+    /** Deterministic vector length for this provider. Callers use this to size storage. */
+    int dimensions();
 
-public class GroupNameFilter implements Predicate<Group> {
-    public static Predicate indexFilter       = new GroupNameFilter("index");
-    public static Predicate enrichFilter      = new GroupNameFilter("enrich");
-    public static Predicate redactFilter      = new GroupNameFilter("redact");
-    public static Predicate validateFilter    = new GroupNameFilter("validate");
-    public static Predicate fingerprintFilter = new GroupNameFilter("fingerprint");
-    public static Predicate materializeFilter = new GroupNameFilter("materialize");
-    public static Predicate i18nFilter        = new GroupNameFilter("i18n");
-    public static Predicate vectorizeFilter   = new GroupNameFilter("vectorize");
-    private String name;
-
-    public GroupNameFilter(String name) {
-        this.name = name;
-    }
-
-    @Override
-    public boolean test(final Group group) {
-        return name.equals(group.getName());
-    }
+    /** Produce an embedding for {@code text}. Returning a zero vector is acceptable for empty input. */
+    float[] embed(String text);
 }

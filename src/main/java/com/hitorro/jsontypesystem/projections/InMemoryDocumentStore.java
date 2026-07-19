@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2025 Chris Collins
+ * Copyright (c) 2006-2026 Chris Collins
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,29 +19,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.hitorro.jsontypesystem.grouppredicates;
+package com.hitorro.jsontypesystem.projections;
 
-import com.hitorro.jsontypesystem.Group;
+import com.fasterxml.jackson.databind.JsonNode;
 
-import java.util.function.Predicate;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class GroupNameFilter implements Predicate<Group> {
-    public static Predicate indexFilter       = new GroupNameFilter("index");
-    public static Predicate enrichFilter      = new GroupNameFilter("enrich");
-    public static Predicate redactFilter      = new GroupNameFilter("redact");
-    public static Predicate validateFilter    = new GroupNameFilter("validate");
-    public static Predicate fingerprintFilter = new GroupNameFilter("fingerprint");
-    public static Predicate materializeFilter = new GroupNameFilter("materialize");
-    public static Predicate i18nFilter        = new GroupNameFilter("i18n");
-    public static Predicate vectorizeFilter   = new GroupNameFilter("vectorize");
-    private String name;
+/** Thread-safe in-memory {@link DocumentStore} for tests and small-scale caches. */
+public final class InMemoryDocumentStore implements DocumentStore {
 
-    public GroupNameFilter(String name) {
-        this.name = name;
+    private final ConcurrentHashMap<String, JsonNode> byId = new ConcurrentHashMap<>();
+
+    public InMemoryDocumentStore put(String id, JsonNode doc) {
+        if (id != null && doc != null) byId.put(id, doc);
+        return this;
     }
 
     @Override
-    public boolean test(final Group group) {
-        return name.equals(group.getName());
+    public JsonNode getDocument(String id) {
+        return id == null ? null : byId.get(id);
+    }
+
+    public int size() {
+        return byId.size();
     }
 }

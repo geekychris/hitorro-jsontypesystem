@@ -22,7 +22,14 @@
 package com.hitorro.jsontypesystem.executors;
 
 import com.hitorro.jsontypesystem.JVS;
+import com.hitorro.jsontypesystem.JVSValidator;
+import com.hitorro.jsontypesystem.projections.DocumentStore;
+import com.hitorro.jsontypesystem.projections.EmbeddingProvider;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
+
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProjectionContext {
     public StringBuilder sb = new StringBuilder();
@@ -31,4 +38,16 @@ public class ProjectionContext {
     public JVS target;
     /** Optional trace — set before calling project() to capture execution details. */
     public ExecutionTrace trace;
+
+    // --- Optional per-projection state. Actions that need one of these read from here; callers
+    //     wire them up before invoking project() and read back after. Unused actions ignore them.
+
+    /** Collected constraint violations produced by ValidateAction. */
+    public List<JVSValidator.Violation> violations = new ArrayList<>();
+    /** Running hash produced by FingerprintAction; set by the caller before projection. */
+    public MessageDigest fingerprint;
+    /** Reference resolver used by MaterializeAction. */
+    public DocumentStore documentStore;
+    /** Embedding backend used by VectorizeAction. */
+    public EmbeddingProvider embeddingProvider;
 }
