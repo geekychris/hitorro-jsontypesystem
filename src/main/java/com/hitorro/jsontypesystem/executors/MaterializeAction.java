@@ -32,13 +32,18 @@ import com.hitorro.util.json.keys.propaccess.PropaccessError;
  * Dereference a reference-shaped field via the {@link ProjectionContext#documentStore} SPI and
  * replace the reference with the full target document at the same path.
  *
- * <p>Reference shapes recognised:
- * <ul>
+ * <p>Reference shapes recognised (in priority order):
+ * <ol>
  *   <li>A scalar string — treated as the document ID directly.</li>
- *   <li>An object with a {@code did} field (matches the {@code core_id} type's typical shape)
- *       — that field is used as the lookup key.</li>
- *   <li>An object with an {@code id} field — same, one level up from {@code core_id}.</li>
- * </ul>
+ *   <li>A {@code core_id}-shaped object with its computed {@code id} field already populated
+ *       (the {@code multivalue-merger} dynamic field defined on {@code core_id}) — that value is
+ *       the unique lookup key.</li>
+ *   <li>A {@code core_id}-shaped object with only {@code domain} and {@code did} populated (the
+ *       {@code id} dynamic hasn't fired yet) — the key is synthesised as
+ *       {@code domain + ":" + did}, matching the default {@link com.hitorro.jsontypesystem.dynamic.MultiValueMergerDM
+ *       MultiValueMergerDM} join. This is the unique-across-domains form; {@code did} alone is
+ *       <b>not</b> unique because two different domains can share the same {@code did}.</li>
+ * </ol>
  * Anything else is left in place. When the store returns {@code null} the reference is left
  * untouched — materialize does not silently drop unresolvable IDs.
  */
@@ -65,17 +70,30 @@ public class MaterializeAction implements ExecutorAction<ExecutionBuilder> {
         }
     }
 
-    /** Pull an ID string out of common reference shapes. */
+    /** Default separator used by {@code core_id}'s {@code multivalue-merger} — see MultiValueMergerDM. */
+    private static final String CORE_ID_SEPARATOR = ":";
+
+    /** Pull an ID string out of common reference shapes. See class Javadoc for priority order. */
     static String extractId(JsonNode ref) {
         if (ref == null || ref.isNull()) return null;
         if (ref.isTextual()) return ref.textValue();
-        if (ref.isObject()) {
-            JsonNode did = ref.get("did");
-            if (did != null && did.isTextual()) return did.textValue();
-            JsonNode id = ref.get("id");
-            if (id != null && id.isTextual()) return id.textValue();
-            if (id != null && id.isNumber()) return id.asText();
+        if (!ref.isObject()) return null;
+
+        // 1. Already-computed core_id.id (the multivalue-merger dynamic result).
+        JsonNode id = ref.get("id");
+        if (id != null) {
+            if (id.isTextual() && !id.textValue().isEmpty()) return id.textValue();
+            if (id.isNumber()) return id.asText();
         }
+        // 2. core_id in the pre-dynamic state: synthesise domain:did.
+        JsonNode domain = ref.get("domain");
+        JsonNode did = ref.get("did");
+        boolean hasDomain = domain != null && domain.isTextual();
+        boolean hasDid    = did != null    && did.isTextual();
+        if (hasDomain && hasDid) {
+            return domain.textValue() + CORE_ID_SEPARATOR + did.textValue();
+        }
+        // Not a shape we understand.
         return null;
     }
 }

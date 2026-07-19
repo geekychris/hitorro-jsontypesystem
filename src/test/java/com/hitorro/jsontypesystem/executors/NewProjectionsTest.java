@@ -336,13 +336,83 @@ class NewProjectionsTest {
 		}
 
 		@Test
-		@DisplayName("MaterializeAction.extractId handles the standard reference shapes")
+		@DisplayName("extractId handles the standard reference shapes")
 		void extractIdShapes() {
+			// Scalar string reference — most common shape when a foreign-key is stored as a string.
 			assertThat(MaterializeAction.extractId(jsonMapper.apply("\"user-1\""))).isEqualTo("user-1");
-			assertThat(MaterializeAction.extractId(jsonMapper.apply("{\"did\":\"d1\"}"))).isEqualTo("d1");
+			// core_id with `id` already computed (multivalue-merger has fired) — this is the
+			// dotted-access form: refField.id is the unique key.
+			assertThat(MaterializeAction.extractId(jsonMapper.apply(
+					"{\"domain\":\"users\",\"did\":\"42\",\"id\":\"users:42\"}"))).isEqualTo("users:42");
+			// Numeric id — coerced to text.
 			assertThat(MaterializeAction.extractId(jsonMapper.apply("{\"id\":42}"))).isEqualTo("42");
+			// Null / non-object / no recognisable fields — null.
 			assertThat(MaterializeAction.extractId(jsonMapper.apply("null"))).isNull();
 			assertThat(MaterializeAction.extractId(jsonMapper.apply("{\"other\":\"x\"}"))).isNull();
+			// did-only (no domain) is NOT unique — refuse rather than guess wrong.
+			assertThat(MaterializeAction.extractId(jsonMapper.apply("{\"did\":\"d1\"}"))).isNull();
+		}
+
+		@Test
+		@DisplayName("Pre-computed core_id: extract synthesises domain:did when id is absent")
+		void extractIdSynthesisesFromDomainDid() {
+			// This is the core_id state BEFORE the multivalue-merger dynamic field fires —
+			// only `domain` and `did` are populated. The lookup key must be domain:did (the
+			// default MultiValueMergerDM join), not `did` alone.
+			assertThat(MaterializeAction.extractId(jsonMapper.apply(
+					"{\"domain\":\"users\",\"did\":\"42\"}"))).isEqualTo("users:42");
+			// Empty `id` string doesn't count as populated — fall through to synthesise.
+			assertThat(MaterializeAction.extractId(jsonMapper.apply(
+					"{\"domain\":\"docs\",\"did\":\"abc\",\"id\":\"\"}"))).isEqualTo("docs:abc");
+		}
+
+		@Test
+		@DisplayName("Materialise via a core_id-shaped reference — pre-computed id")
+		void materializeViaCoreIdPrecomputed() {
+			Type t = buildType("""
+					{"name": "document_materialize_coreid_test", "fields": [
+					  {"name": "author", "type": "core_id",
+					   "groups": [{"name": "materialize"}]}
+					]}""");
+			ExecutionBuilder<MaterializeAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.materializeFilter, new MaterializeFactory());
+
+			JVS doc = JVS.read("""
+					{"author": {"domain":"users","did":"42","id":"users:42"}}""");
+			InMemoryDocumentStore store = new InMemoryDocumentStore();
+			store.put("users:42", jsonMapper.apply("{\"name\":\"Chris\"}"));
+
+			ProjectionContext pc = new ProjectionContext();
+			pc.source = doc;
+			pc.target = new JVS();
+			pc.documentStore = store;
+			plan.getExecutor().project(pc);
+
+			assertThat(doc.getJsonNode().get("author").get("name").asText()).isEqualTo("Chris");
+		}
+
+		@Test
+		@DisplayName("Materialise via a core_id-shaped reference — synthesise domain:did when id absent")
+		void materializeViaCoreIdSynthesised() {
+			Type t = buildType("""
+					{"name": "document_materialize_coreid_test2", "fields": [
+					  {"name": "author", "type": "core_id",
+					   "groups": [{"name": "materialize"}]}
+					]}""");
+			ExecutionBuilder<MaterializeAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.materializeFilter, new MaterializeFactory());
+
+			// The reference doesn't yet have the merged `id` — only domain + did.
+			JVS doc = JVS.read("""
+					{"author": {"domain":"users","did":"42"}}""");
+			InMemoryDocumentStore store = new InMemoryDocumentStore();
+			store.put("users:42", jsonMapper.apply("{\"name\":\"Chris\"}"));
+
+			ProjectionContext pc = new ProjectionContext();
+			pc.source = doc;
+			pc.target = new JVS();
+			pc.documentStore = store;
+			plan.getExecutor().project(pc);
+
+			assertThat(doc.getJsonNode().get("author").get("name").asText()).isEqualTo("Chris");
 		}
 	}
 
