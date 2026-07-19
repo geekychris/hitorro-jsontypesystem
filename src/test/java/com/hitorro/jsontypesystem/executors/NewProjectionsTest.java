@@ -39,12 +39,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -172,6 +175,54 @@ class NewProjectionsTest {
 			// Untouched field
 			assertThat(doc.getString("filename")).isEqualTo("annual-report.pdf");
 		}
+
+		@Test
+		@DisplayName("hmac mode uses ProjectionContext.redactionKey; different keys → different hex")
+		void redactHmacIsKeyed() {
+			Type t = buildType("""
+					{"name": "document_redact_hmac_test", "fields": [
+					  {"name": "author", "type": "core_string",
+					   "groups": [{"name": "redact", "method": "hmac"}]}
+					]}""");
+			ExecutionBuilder<RedactAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.redactFilter, new RedactFactory());
+
+			JVS a = JVS.read(DOC_JSON);
+			ProjectionContext pcA = new ProjectionContext();
+			pcA.source = a; pcA.target = new JVS();
+			pcA.redactionKey = new SecretKeySpec("key-tenant-A".getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+			plan.getExecutor().project(pcA);
+
+			JVS b = JVS.read(DOC_JSON);
+			ProjectionContext pcB = new ProjectionContext();
+			pcB.source = b; pcB.target = new JVS();
+			pcB.redactionKey = new SecretKeySpec("key-tenant-B".getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+			plan.getExecutor().project(pcB);
+
+			String hashedA = a.getString("author");
+			String hashedB = b.getString("author");
+			assertThat(hashedA).matches("^[0-9a-f]{64}$");
+			assertThat(hashedB).matches("^[0-9a-f]{64}$");
+			// Same input, different keys → different output. This is the whole point of HMAC.
+			assertThat(hashedA).isNotEqualTo(hashedB);
+		}
+
+		@Test
+		@DisplayName("hmac mode without a key fails closed — no silent SHA-256 fallback")
+		void redactHmacRequiresKey() {
+			Type t = buildType("""
+					{"name": "document_redact_hmac_nokey", "fields": [
+					  {"name": "author", "type": "core_string",
+					   "groups": [{"name": "redact", "method": "hmac"}]}
+					]}""");
+			ExecutionBuilder<RedactAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.redactFilter, new RedactFactory());
+
+			JVS doc = JVS.read(DOC_JSON);
+			ProjectionContext pc = new ProjectionContext();
+			pc.source = doc; pc.target = new JVS();
+			// pc.redactionKey deliberately not set.
+			assertThatThrownBy(() -> plan.getExecutor().project(pc))
+					.isInstanceOf(RedactAction.RedactionFailedException.class);
+		}
 	}
 
 	@Nested
@@ -200,6 +251,8 @@ class NewProjectionsTest {
 			ProjectionContext pc = new ProjectionContext();
 			pc.source = bad;
 			pc.target = new JVS();
+			// Opt in to validation — pc.violations defaults to null now.
+			pc.violations = new java.util.ArrayList<>();
 			plan.getExecutor().project(pc);
 
 			assertThat(pc.violations).hasSize(3);
@@ -224,9 +277,29 @@ class NewProjectionsTest {
 			ProjectionContext pc = new ProjectionContext();
 			pc.source = clean;
 			pc.target = new JVS();
+			pc.violations = new java.util.ArrayList<>();
 			plan.getExecutor().project(pc);
 
 			assertThat(pc.violations).isEmpty();
+		}
+
+		@Test
+		@DisplayName("With pc.violations null (default), ValidateAction is a no-op")
+		void validationOptIn() {
+			Type t = buildType("""
+					{"name": "document_validate_test3", "fields": [
+					  {"name": "author", "type": "core_string", "format": "email",
+					   "groups": [{"name": "validate"}]}
+					]}""");
+			ExecutionBuilder<ValidateAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.validateFilter, new ValidateFactory());
+
+			JVS bad = JVS.read("{\"author\": \"nope\"}");
+			ProjectionContext pc = new ProjectionContext(); // pc.violations left null
+			pc.source = bad;
+			pc.target = new JVS();
+			plan.getExecutor().project(pc);
+
+			assertThat(pc.violations).isNull();
 		}
 	}
 
@@ -420,7 +493,7 @@ class NewProjectionsTest {
 	@DisplayName("Projection 5: i18n — flatten MLS envelopes into per-language scalars")
 	class I18n {
 		@Test
-		@DisplayName("'content' MLS on demo_document flattens to French when lang=fr")
+		@DisplayName("'content' MLS on demo_document flattens French text to target; source is preserved")
 		void flattenToFrench() {
 			Type t = buildType("""
 					{"name": "document_i18n_test", "fields": [
@@ -430,20 +503,53 @@ class NewProjectionsTest {
 			ExecutionBuilder<I18nAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.i18nFilter, new I18nFactory());
 
 			JVS doc = JVS.read(DOC_JSON);
+			JVS target = new JVS();
 			ProjectionContext pc = new ProjectionContext();
 			pc.source = doc;
-			pc.target = new JVS();
-			// project(pc, lang) is a convenience; here we pass through project(pc) which uses
-			// the default lang wired by the executor. Use the underlying API to set lang.
+			pc.target = target;
 			plan.getExecutor().project(pc, pc.path, false, "fr");
 
-			JsonNode content = doc.getJsonNode().get("content");
+			// Flattened text goes to TARGET.
+			JsonNode content = target.getJsonNode().get("content");
+			assertThat(content).isNotNull();
 			assertThat(content.isTextual()).isTrue();
 			assertThat(content.asText()).contains("renard");
+			// Source envelope is preserved intact so a subsequent projection can pick a different lang.
+			JsonNode srcContent = doc.getJsonNode().get("content");
+			assertThat(srcContent.isObject()).isTrue();
+			assertThat(srcContent.get("mls").isArray()).isTrue();
 		}
 
 		@Test
-		@DisplayName("Falls back to 'en' then first entry when requested lang not present")
+		@DisplayName("Running the same projection twice with different langs yields two flat docs from one source")
+		void multiLangFromSingleSource() {
+			Type t = buildType("""
+					{"name": "document_i18n_test_multi", "fields": [
+					  {"name": "content", "type": "core_mls",
+					   "groups": [{"name": "i18n"}]}
+					]}""");
+			ExecutionBuilder<I18nAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.i18nFilter, new I18nFactory());
+
+			JVS doc = JVS.read(DOC_JSON);
+
+			JVS enTarget = new JVS();
+			ProjectionContext enPc = new ProjectionContext();
+			enPc.source = doc;
+			enPc.target = enTarget;
+			plan.getExecutor().project(enPc, enPc.path, false, "en");
+
+			JVS frTarget = new JVS();
+			ProjectionContext frPc = new ProjectionContext();
+			frPc.source = doc;
+			frPc.target = frTarget;
+			plan.getExecutor().project(frPc, frPc.path, false, "fr");
+
+			assertThat(enTarget.getJsonNode().get("content").asText()).contains("quick brown fox");
+			assertThat(frTarget.getJsonNode().get("content").asText()).contains("renard");
+		}
+
+		@Test
+		@DisplayName("Falls back to 'en' then first valid entry when requested lang not present")
 		void fallbackOrder() {
 			Type t = buildType("""
 					{"name": "document_i18n_test2", "fields": [
@@ -453,22 +559,45 @@ class NewProjectionsTest {
 			ExecutionBuilder<I18nAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.i18nFilter, new I18nFactory());
 
 			JVS doc = JVS.read(DOC_JSON);
+			JVS target = new JVS();
 			ProjectionContext pc = new ProjectionContext();
 			pc.source = doc;
-			pc.target = new JVS();
-			plan.getExecutor().project(pc, pc.path, false, "de"); // German not present → fallback to English
+			pc.target = target;
+			plan.getExecutor().project(pc, pc.path, false, "de"); // German not present → fallback
 
-			assertThat(doc.getJsonNode().get("content").asText()).contains("quick brown fox");
+			assertThat(target.getJsonNode().get("content").asText()).contains("quick brown fox");
 		}
 
 		@Test
-		@DisplayName("pickText helper honours preferred → en → first ordering")
+		@DisplayName("pickText honours preferred → en → first-valid, and skips malformed entries")
 		void pickTextOrdering() {
 			JsonNode mls = jsonMapper.apply(
 					"[{\"lang\":\"en\",\"text\":\"en-text\"},{\"lang\":\"fr\",\"text\":\"fr-text\"}]");
 			assertThat(I18nAction.pickText(mls, "fr")).isEqualTo("fr-text");
 			assertThat(I18nAction.pickText(mls, "de")).isEqualTo("en-text");
 			assertThat(I18nAction.pickText(mls, null)).isEqualTo("en-text");
+		}
+
+		@Test
+		@DisplayName("Malformed entries (missing text / non-textual lang) don't short-circuit the search")
+		void pickTextSkipsMalformed() {
+			// A malformed 'fr' entry (text is a number, not a string) shouldn't stop us from
+			// falling through to the valid 'en' entry.
+			JsonNode mls = jsonMapper.apply(
+					"[{\"lang\":\"fr\",\"text\":42}," +      // malformed: text isn't textual
+					" {\"lang\":\"en\",\"text\":\"en-text\"}]");
+			assertThat(I18nAction.pickText(mls, "fr")).isEqualTo("en-text");
+
+			// Entry with wrong-type lang is also skipped
+			JsonNode mls2 = jsonMapper.apply(
+					"[{\"lang\":123,\"text\":\"anon\"}," +
+					" {\"lang\":\"en\",\"text\":\"en-text\"}]");
+			assertThat(I18nAction.pickText(mls2, null)).isEqualTo("en-text");
+
+			// All malformed → null
+			JsonNode mls3 = jsonMapper.apply(
+					"[{\"lang\":\"en\"},{\"lang\":\"fr\",\"text\":true}]");
+			assertThat(I18nAction.pickText(mls3, "fr")).isNull();
 		}
 	}
 
@@ -510,6 +639,61 @@ class NewProjectionsTest {
 			EmbeddingProvider e = new HashingEmbeddingProvider(64);
 			assertThat(e.embed("the quick brown fox")).isEqualTo(e.embed("the quick brown fox"));
 			assertThat(e.embed("the quick brown fox")).isNotEqualTo(e.embed("something entirely different"));
+		}
+
+		@Test
+		@DisplayName("Vectorize honours requested lang when extracting text from an MLS envelope")
+		void vectorizeLangAware() {
+			Type t = buildType("""
+					{"name": "document_vectorize_lang_test", "fields": [
+					  {"name": "content", "type": "core_mls",
+					   "groups": [{"name": "vectorize"}]}
+					]}""");
+			ExecutionBuilder<VectorizeAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.vectorizeFilter, new VectorizeFactory());
+
+			EmbeddingProvider embedder = new HashingEmbeddingProvider(32);
+
+			JVS docEn = JVS.read(DOC_JSON);
+			JVS targetEn = new JVS();
+			ProjectionContext pcEn = new ProjectionContext();
+			pcEn.source = docEn; pcEn.target = targetEn; pcEn.embeddingProvider = embedder;
+			plan.getExecutor().project(pcEn, pcEn.path, false, "en");
+
+			JVS docFr = JVS.read(DOC_JSON);
+			JVS targetFr = new JVS();
+			ProjectionContext pcFr = new ProjectionContext();
+			pcFr.source = docFr; pcFr.target = targetFr; pcFr.embeddingProvider = embedder;
+			plan.getExecutor().project(pcFr, pcFr.path, false, "fr");
+
+			// Different langs → different embeddings (unless there's coincidental collision).
+			assertThat(targetEn.getJsonNode().get("content_vector"))
+					.isNotEqualTo(targetFr.getJsonNode().get("content_vector"));
+		}
+
+		@Test
+		@DisplayName("Provider that returns wrong-length vector is rejected (no write)")
+		void vectorizeRejectsDimensionMismatch() {
+			Type t = buildType("""
+					{"name": "document_vectorize_mismatch_test", "fields": [
+					  {"name": "filename", "type": "core_string",
+					   "groups": [{"name": "vectorize"}]}
+					]}""");
+			ExecutionBuilder<VectorizeAction> plan = plan(t, (Predicate<BaseT>) GroupNameFilter.vectorizeFilter, new VectorizeFactory());
+
+			// A broken provider: claims dimensions() = 16 but returns 8 elements.
+			EmbeddingProvider broken = new EmbeddingProvider() {
+				@Override public int dimensions() { return 16; }
+				@Override public float[] embed(String text) { return new float[8]; }
+			};
+
+			JVS doc = JVS.read(DOC_JSON);
+			JVS target = new JVS();
+			ProjectionContext pc = new ProjectionContext();
+			pc.source = doc; pc.target = target; pc.embeddingProvider = broken;
+			plan.getExecutor().project(pc);
+
+			// Nothing should have been written under filename_vector.
+			assertThat(target.getJsonNode().get("filename_vector")).isNull();
 		}
 
 		@Test

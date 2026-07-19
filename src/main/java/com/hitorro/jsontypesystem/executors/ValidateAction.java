@@ -25,19 +25,26 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.FieldConstraints;
 import com.hitorro.jsontypesystem.Group;
-import com.hitorro.util.core.Log;
+import com.hitorro.jsontypesystem.JVSValidator;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
 
 /**
  * Run {@link FieldConstraints} against the value at the projected path and collect any
- * violations into {@link ProjectionContext#violations}. Complements {@link com.hitorro.jsontypesystem.JVSValidator
- * JVSValidator}'s whole-document validation by scoping the check to a specific projection group
- * — e.g. "the fields that ship with the index projection must all pass their constraints before
- * we index this doc".
+ * violations into {@link ProjectionContext#violations}. Complements {@link JVSValidator}'s
+ * whole-document validation by scoping the check to a specific projection group — e.g. "the
+ * fields that ship with the index projection must all pass their constraints before we index
+ * this doc".
  *
- * <p>Callers inspect {@code pc.violations} after {@code project(pc)} returns; a non-empty list
- * means the projection surfaced constraint failures.
+ * <p>Callers opt in to validation by allocating {@code pc.violations = new ArrayList<>()}
+ * before invoking the projection; {@link ProjectionContext} deliberately leaves it null by
+ * default so unused contexts don't accumulate. If {@code pc.violations} is null when this
+ * action runs, the check is skipped entirely.
+ *
+ * <p>Failure mode: a propaccess error looking up the field's current value is recorded as
+ * a validation violation at ERROR level rather than logged and swallowed. That way an
+ * "unreadable field" surfaces the same way as a constraint failure — the caller sees it in
+ * {@code pc.violations} and can gate the pipeline on it.
  */
 public class ValidateAction implements ExecutorAction<ExecutionBuilder> {
 
@@ -57,7 +64,12 @@ public class ValidateAction implements ExecutorAction<ExecutionBuilder> {
             JsonNode val = pc.source.get(path);
             FieldConstraints.check(path.toString(), val, fieldMeta, pc.violations);
         } catch (PropaccessError e) {
-            Log.util.error("ValidateAction failed for path %s: %s", path, e.getMessage());
+            // Record as a validation violation instead of swallowing — an unreadable field
+            // is a validation failure the caller needs to see.
+            pc.violations.add(new JVSValidator.Violation(
+                    path.toString(),
+                    "path access failed during validation: " + e.getMessage(),
+                    JVSValidator.Level.ERROR));
         }
     }
 }

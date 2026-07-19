@@ -25,19 +25,28 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Thread-safe in-memory {@link DocumentStore} for tests and small-scale caches. */
+/**
+ * Thread-safe in-memory {@link DocumentStore} for tests and small-scale caches.
+ *
+ * <p><b>Ownership:</b> the store defensively deep-copies documents on both {@link #put} and
+ * {@link #getDocument} so callers can never share mutable {@link JsonNode} instances with the
+ * internal cache. Mutating a doc after putting it does <em>not</em> mutate the stored copy;
+ * mutating a doc returned from {@code getDocument} does <em>not</em> corrupt subsequent reads.
+ */
 public final class InMemoryDocumentStore implements DocumentStore {
 
     private final ConcurrentHashMap<String, JsonNode> byId = new ConcurrentHashMap<>();
 
     public InMemoryDocumentStore put(String id, JsonNode doc) {
-        if (id != null && doc != null) byId.put(id, doc);
+        if (id != null && doc != null) byId.put(id, doc.deepCopy());
         return this;
     }
 
     @Override
     public JsonNode getDocument(String id) {
-        return id == null ? null : byId.get(id);
+        if (id == null) return null;
+        JsonNode hit = byId.get(id);
+        return hit == null ? null : hit.deepCopy();
     }
 
     public int size() {

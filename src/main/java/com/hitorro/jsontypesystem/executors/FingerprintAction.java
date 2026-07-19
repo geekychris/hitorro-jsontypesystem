@@ -35,13 +35,19 @@ import java.nio.charset.StandardCharsets;
  * initialises the {@code MessageDigest} before projection and reads the finalised digest bytes
  * afterward.
  *
- * <p>Value contribution shape: {@code "<path>=<value>\0"}. Concatenating with a NUL delimiter is
- * ambiguity-safe (path and value can each contain any character, but not the NUL byte in
- * printable JSON), so re-ordering the fields in the type definition changes the hash — which
- * is desired: schema changes must invalidate cached fingerprints.
+ * <p>Framing (injective encoding):
+ * <pre>
+ *   [4-byte BE path length] [path UTF-8] [4-byte BE value length or -1 for null] [value UTF-8]
+ * </pre>
+ * Length-prefixed rather than delimiter-separated so a value containing arbitrary bytes
+ * (including escaped NULs or `=` signs) cannot be confused with a field boundary. The value is
+ * serialised via {@link JsonNode#toString()} to preserve type distinctions (string {@code "42"}
+ * vs number {@code 42}) — earlier drafts used {@code asText()} which erased them. A missing
+ * value is written as a {@code -1} length; empty-string value is length 0 — so absence stays
+ * distinguishable from empty-string presence.
  *
- * <p>Null / missing values contribute {@code "<path>=\0"}, so absence is distinguishable from
- * empty-string presence.
+ * <p>Field order in the type definition still influences the hash — schema changes therefore
+ * invalidate cached fingerprints, which is desired.
  */
 public class FingerprintAction implements ExecutorAction<ExecutionBuilder> {
 
@@ -54,18 +60,27 @@ public class FingerprintAction implements ExecutorAction<ExecutionBuilder> {
         if (pc.fingerprint == null) return;
         try {
             JsonNode val = pc.source.get(path);
-            String pathStr = path.toString();
-            pc.fingerprint.update(pathStr.getBytes(StandardCharsets.UTF_8));
-            pc.fingerprint.update((byte) '=');
-            if (val != null && !val.isNull()) {
-                // Use asText() when scalar, toString() for structured values — canonical enough
-                // for a fingerprint without a full canonicalizer.
-                String s = val.isValueNode() ? val.asText() : val.toString();
-                pc.fingerprint.update(s.getBytes(StandardCharsets.UTF_8));
+            byte[] pathBytes = path.toString().getBytes(StandardCharsets.UTF_8);
+            writeInt(pc.fingerprint, pathBytes.length);
+            pc.fingerprint.update(pathBytes);
+            if (val == null || val.isNull()) {
+                // Sentinel for missing — distinguishable from empty string (length 0).
+                writeInt(pc.fingerprint, -1);
+            } else {
+                // toString() preserves type (quotes for strings, bare digits for numbers, etc.).
+                byte[] valBytes = val.toString().getBytes(StandardCharsets.UTF_8);
+                writeInt(pc.fingerprint, valBytes.length);
+                pc.fingerprint.update(valBytes);
             }
-            pc.fingerprint.update((byte) 0);
         } catch (PropaccessError e) {
             Log.util.error("FingerprintAction failed for path %s: %s", path, e.getMessage());
         }
+    }
+
+    private static void writeInt(java.security.MessageDigest md, int v) {
+        md.update((byte) ((v >>> 24) & 0xff));
+        md.update((byte) ((v >>> 16) & 0xff));
+        md.update((byte) ((v >>>  8) & 0xff));
+        md.update((byte) ( v         & 0xff));
     }
 }

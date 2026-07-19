@@ -22,11 +22,20 @@
 package com.hitorro.jsontypesystem.projections;
 
 /**
- * Deterministic feature-hashing {@link EmbeddingProvider}. Not a real language model — it
- * hashes tokens into fixed-dimensional space. Useful as a stable default in tests and as a
- * fallback when no real embedding backend is wired up; the vectors are consistent for the same
- * input and different for different inputs, which is enough for downstream cosine-similarity /
- * dedup smoke tests.
+ * Deterministic feature-hashing {@link EmbeddingProvider}. <b>Not a language model.</b>
+ *
+ * <p>Tokenises on whitespace and hashes tokens into fixed-dimensional space. Vectors are
+ * consistent for identical input and different for different inputs, which is enough for
+ * unit-testing the {@link com.hitorro.jsontypesystem.executors.VectorizeAction VectorizeAction}
+ * wiring, but the resulting vectors are <em>not</em> semantically meaningful — they capture
+ * lexical overlap only. Two paraphrases will look completely dissimilar; two unrelated docs
+ * that share stopwords will look similar.
+ *
+ * <p><b>Test-only. Do not wire as a production or retrieval default.</b> Real callers must
+ * plug in a real sentence-embedding backend (ONNX-hosted transformer, remote inference
+ * service, etc.). Behavior on non-Latin scripts (CJK, Thai, Arabic) is particularly
+ * unrepresentative — this whitespace tokeniser produces very short token lists on scripts
+ * without inter-word spaces, and the resulting vectors won't cluster or dedup usefully.
  */
 public final class HashingEmbeddingProvider implements EmbeddingProvider {
 

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.Group;
+import com.hitorro.jsontypesystem.projections.EmbeddingProvider;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
@@ -37,9 +38,13 @@ import com.hitorro.util.json.keys.propaccess.PropaccessError;
  * pipelines) consume the vector for semantic operations.
  *
  * <p>For scalar text values, the string form of the value is embedded directly. For MLS
- * envelopes, the {@code text} of the first entry is embedded — callers who need per-language
- * vectors should run {@link I18nAction i18n} first to flatten MLS, then vectorize. Non-string
- * values are skipped (a warning is logged; consumers can wrap them in a text projection first).
+ * envelopes, the projection language's entry is selected using the same preferred → English →
+ * first-valid fallback as {@link I18nAction#pickText}. Callers who need per-language vectors
+ * run this projection once per output language. Non-string values are skipped silently.
+ *
+ * <p>The returned vector's length is validated against
+ * {@link EmbeddingProvider#dimensions()}; a mismatch is rejected at this boundary (nothing is
+ * written; a warning is logged) so downstream storage can rely on a consistent shape.
  */
 public class VectorizeAction implements ExecutorAction<ExecutionBuilder> {
 
@@ -52,11 +57,19 @@ public class VectorizeAction implements ExecutorAction<ExecutionBuilder> {
         if (pc.embeddingProvider == null) return;
         try {
             JsonNode val = pc.source.get(path);
-            String text = extractText(val);
+            String text = extractText(val, lang);
             if (text == null || text.isEmpty()) return;
 
             float[] vector = pc.embeddingProvider.embed(text);
             if (vector == null) return;
+
+            int expected = pc.embeddingProvider.dimensions();
+            if (vector.length != expected) {
+                Log.util.warn("VectorizeAction: provider returned vector of length %d, " +
+                        "expected %d (from dimensions()); skipping path %s",
+                        vector.length, expected, path);
+                return;
+            }
 
             ArrayNode arr = JsonNodeFactory.instance.arrayNode(vector.length);
             for (float f : vector) arr.add(f);
@@ -68,18 +81,14 @@ public class VectorizeAction implements ExecutorAction<ExecutionBuilder> {
         }
     }
 
-    private static String extractText(JsonNode val) {
+    /** Language-aware text extraction. Reuses {@link I18nAction#pickText}'s fallback for MLS. */
+    static String extractText(JsonNode val, String lang) {
         if (val == null || val.isNull()) return null;
         if (val.isTextual()) return val.textValue();
         if (val.isObject()) {
-            // MLS envelope shorthand — take the first entry's text.
             JsonNode mls = val.get("mls");
             if (mls != null && mls.isArray() && !mls.isEmpty()) {
-                JsonNode first = mls.get(0);
-                if (first != null && first.isObject()) {
-                    JsonNode t = first.get("text");
-                    if (t != null && t.isTextual()) return t.textValue();
-                }
+                return I18nAction.pickText(mls, lang);
             }
         }
         return null;

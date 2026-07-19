@@ -26,14 +26,20 @@ import com.hitorro.jsontypesystem.Group;
 import java.util.function.Predicate;
 
 public class GroupNameFilter implements Predicate<Group> {
-    public static Predicate indexFilter       = new GroupNameFilter("index");
-    public static Predicate enrichFilter      = new GroupNameFilter("enrich");
-    public static Predicate redactFilter      = new GroupNameFilter("redact");
-    public static Predicate validateFilter    = new GroupNameFilter("validate");
-    public static Predicate fingerprintFilter = new GroupNameFilter("fingerprint");
-    public static Predicate materializeFilter = new GroupNameFilter("materialize");
-    public static Predicate i18nFilter        = new GroupNameFilter("i18n");
-    public static Predicate vectorizeFilter   = new GroupNameFilter("vectorize");
+    // Raw Predicate declarations retained for compatibility with
+    // BaseProjectionFactoryMapper.predicate, which is typed Predicate<BaseT> (BaseT is Group's
+    // supertype, so the actual runtime instance works — but the compile-time types wouldn't line
+    // up if we tightened these to Predicate<Group>).  Making them `final` is the useful
+    // immutability win; the wider typing cleanup requires refactoring the visitor's predicate
+    // parameter shape and is deferred.
+    @SuppressWarnings("rawtypes") public static final Predicate indexFilter       = new GroupNameFilter("index");
+    @SuppressWarnings("rawtypes") public static final Predicate enrichFilter      = new GroupNameFilter("enrich");
+    @SuppressWarnings("rawtypes") public static final Predicate redactFilter      = new GroupNameFilter("redact");
+    @SuppressWarnings("rawtypes") public static final Predicate validateFilter    = new GroupNameFilter("validate");
+    @SuppressWarnings("rawtypes") public static final Predicate fingerprintFilter = new GroupNameFilter("fingerprint");
+    @SuppressWarnings("rawtypes") public static final Predicate materializeFilter = new GroupNameFilter("materialize");
+    @SuppressWarnings("rawtypes") public static final Predicate i18nFilter        = new GroupNameFilter("i18n");
+    @SuppressWarnings("rawtypes") public static final Predicate vectorizeFilter   = new GroupNameFilter("vectorize");
     private String name;
 
     public GroupNameFilter(String name) {
