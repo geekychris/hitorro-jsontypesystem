@@ -22,7 +22,14 @@
 package com.hitorro.jsontypesystem.executors;
 
 import com.hitorro.jsontypesystem.JVS;
+import com.hitorro.jsontypesystem.JVSValidator;
+import com.hitorro.jsontypesystem.projections.DocumentStore;
+import com.hitorro.jsontypesystem.projections.EmbeddingProvider;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
+
+import javax.crypto.SecretKey;
+import java.security.MessageDigest;
+import java.util.List;
 
 public class ProjectionContext {
     public StringBuilder sb = new StringBuilder();
@@ -31,4 +38,23 @@ public class ProjectionContext {
     public JVS target;
     /** Optional trace — set before calling project() to capture execution details. */
     public ExecutionTrace trace;
+
+    // --- Optional per-projection state. Actions that need one of these read from here; callers
+    //     wire them up before invoking project() and read back after. Unused actions ignore them.
+    //     All fields default to null so callers opt in explicitly — an unset `violations` list
+    //     means "validation not requested", not "validation succeeded with no findings".
+
+    /** Collected constraint violations produced by ValidateAction. Allocate an ArrayList before
+     *  running the validate projection; leave null when validation is not requested. */
+    public List<JVSValidator.Violation> violations;
+    /** Running hash produced by FingerprintAction; set by the caller before projection. */
+    public MessageDigest fingerprint;
+    /** Reference resolver used by MaterializeAction. */
+    public DocumentStore documentStore;
+    /** Embedding backend used by VectorizeAction. */
+    public EmbeddingProvider embeddingProvider;
+    /** Secret key used by RedactAction's {@code hmac} mode. Required when the redact mode
+     *  is {@code hmac}; ignored otherwise. Callers wire this from their secret-management
+     *  layer (Vault, K8s secret, etc.) — never hard-code. */
+    public SecretKey redactionKey;
 }
