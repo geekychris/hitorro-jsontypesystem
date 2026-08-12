@@ -44,7 +44,7 @@ public class Field extends BaseT implements FieldBaseIntf {
     public static BooleanProperty vectorKey = new BooleanProperty("vector", "", false);
     public static JsonInitableProperty<DynamicFieldMapper> dynamicFieldMapperKey = new JsonInitableProperty<>("dynamic", "", null, DynamicFieldMapper.class, null);
     public static JsonInitableProperty<Group> groupKey = new JsonInitableProperty<>("", "", null, Group.class, Group.class);
-    public static CollectionProperty<Group> groupsKey = groupKey.collection("groups", "", new ArrayList<>());
+    public static CollectionProperty<Group> groupsKey = new CollectionProperty<>(new com.hitorro.util.json.keys.propaccess.Propaccess("groups"), "", new ArrayList<>(), groupKey);
     private Type type;
     private boolean vector;
     private Map<String, Collection<Group>> groups = new HashMap<>();

@@ -23,12 +23,12 @@ package com.hitorro.jsontypesystem;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hitorro.util.basefile.Name2JsonMapper;
-import com.hitorro.util.core.Env;
 import com.hitorro.util.core.events.cache.HashCache;
 import com.hitorro.util.core.events.cache.SingletonCache;
 import com.hitorro.util.core.iterator.Mapper;
 import com.hitorro.util.json.keys.JsonInitableProperty;
 import com.hitorro.util.json.keys.MapProperty;
+import com.hitorro.util.basefile.tools.EnvBaseFiles;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class SolrFieldTypes {
     public static HashCache<String, JsonNode> solrFieldTypesConfig =
             new HashCache<>(0, true,
                     null, "solrconfig",
-                    new Name2JsonMapper(Env.getBinConfigBaseFile().getChild("jsonconfigs"), "solr"));
+                    new Name2JsonMapper(EnvBaseFiles.getBinConfigBaseFile().getChild("jsonconfigs"), "solr"));
 
     public static SingletonCache<SolrFieldTypes> solrFieldTypeCache =
             new SingletonCache<SolrFieldTypes>(true,
@@ -46,7 +46,7 @@ public class SolrFieldTypes {
 
     public static JsonInitableProperty<SolrFieldType> SolrFieldTypeKey = new JsonInitableProperty("", "", null, SolrFieldType.class, SolrFieldType.class);
 
-    public static MapProperty<String, SolrFieldType> SolrFields = SolrFieldTypeKey.mapProperty("fields", "", null, SolrFieldType.Name);
+    public static MapProperty<String, SolrFieldType> SolrFields = new MapProperty<String, SolrFieldType>(new com.hitorro.util.json.keys.propaccess.Propaccess("fields"), "", null, SolrFieldTypeKey, SolrFieldType.Name);
 
     protected Map<String, SolrFieldType> map = new HashMap();
 

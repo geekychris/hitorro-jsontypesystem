@@ -22,6 +22,7 @@
 package com.hitorro.jsontypesystem;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.hitorro.util.core.iterator.helpers.FileMappers;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -125,7 +126,7 @@ public class JVS implements VS {
 	}
 
 	public static JVS read(File file) throws Exception {
-		return new JVS(FileUtil.fsStaxJsonIter.apply(file).getFirstItemAndClose());
+		return new JVS(FileMappers.fsStaxJsonIter.apply(file).getFirstItemAndClose());
 	}
 
 	public static JVS read(BaseFile bf) throws Exception {

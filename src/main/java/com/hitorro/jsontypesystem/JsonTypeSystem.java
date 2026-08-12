@@ -26,11 +26,11 @@ import com.hitorro.jsontypesystem.schema.Name2SchemaJsonMapper;
 import com.hitorro.jsontypesystem.schema.TypeSchemaRegistry;
 import com.hitorro.util.basefile.Name2JsonMapper;
 import com.hitorro.util.basefile.fs.BaseFile;
-import com.hitorro.util.core.Env;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.core.events.cache.HashCache;
 import com.hitorro.util.core.iterator.Mapper;
 import com.hitorro.util.core.string.StringUtil;
+import com.hitorro.util.basefile.tools.EnvBaseFiles;
 
 
 public class JsonTypeSystem {
@@ -47,7 +47,7 @@ public class JsonTypeSystem {
     public static HashCache<String, JsonNode> jsonTypeConfig =
             new HashCache<>(0, true,
                     null, "typesconfig",
-                    new Name2JsonMapper(Env.getBinConfigBaseFile().getChild("types"), "core"));
+                    new Name2JsonMapper(EnvBaseFiles.getBinConfigBaseFile().getChild("types"), "core"));
 
     private static HashCache<String, JsonNode> schemaTypeConfig = null;
 
@@ -83,7 +83,7 @@ public class JsonTypeSystem {
      */
     static HashCache<String, JsonNode> getSchemaTypeConfig() {
         if (schemaTypeConfig == null) {
-            BaseFile schemasDir = Env.getBinConfigBaseFile().getChild("schemas");
+            BaseFile schemasDir = EnvBaseFiles.getBinConfigBaseFile().getChild("schemas");
             schemaTypeConfig = new HashCache<>(0, true,
                     null, "typesconfig-schema",
                     new Name2SchemaJsonMapper(schemasDir, "core"));

@@ -22,13 +22,13 @@
 package com.hitorro.language.wordnet;
 
 import com.hitorro.util.basefile.fs.BaseFile;
-import com.hitorro.util.core.Env;
 import net.sf.extjwnl.JWNLException;
 import net.sf.extjwnl.dictionary.Dictionary;
 import net.sf.extjwnl.dictionary.file.DictionaryCatalog;
 import net.sf.extjwnl.dictionary.file_manager.FileManagerImpl;
 import net.sf.extjwnl.util.factory.NameValueParam;
 import net.sf.extjwnl.util.factory.Param;
+import com.hitorro.util.basefile.tools.EnvBaseFiles;
 
 import java.util.Map;
 
@@ -38,7 +38,7 @@ public class HTFileManagerImpl extends FileManagerImpl {
 	}
 
 	public static Map<String, Param> augmentParams(Dictionary dictionary, Map<String, Param> params) {
-		BaseFile wnDir = Env.getWordnetDirectory();
+		BaseFile wnDir = EnvBaseFiles.getWordnetDirectory();
 		params.put(DictionaryCatalog.DICTIONARY_PATH_KEY,
 				new NameValueParam(dictionary,
 						DictionaryCatalog.DICTIONARY_PATH_KEY,

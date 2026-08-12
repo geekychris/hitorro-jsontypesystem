@@ -22,13 +22,13 @@
 package com.hitorro.jsontypesystem;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.hitorro.util.core.Env;
 import com.hitorro.util.json.String2JsonMapper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import com.hitorro.util.basefile.tools.EnvBaseFiles;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -278,7 +278,7 @@ class JVSValidatorTest {
 
 		@BeforeAll
 		static void writeConstrainedTypeFile() throws Exception {
-			// JsonTypeSystem's static cache is built off of Env.getBinConfigBaseFile() at
+			// JsonTypeSystem's static cache is built off of EnvBaseFiles.getBinConfigBaseFile() at
 			// class-load time. If HT_BIN wasn't set before that first class-load, the cache
 			// points somewhere useless and getType always returns null. To make this test
 			// deterministic, we find the real config/types dir that ships with the monorepo

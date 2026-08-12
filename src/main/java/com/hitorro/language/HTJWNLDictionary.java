@@ -23,7 +23,6 @@ package com.hitorro.language;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.hitorro.util.core.Env;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.core.events.cache.SingletonCache;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
@@ -38,6 +37,7 @@ import net.sf.extjwnl.dictionary.Dictionary;
 import net.sf.extjwnl.dictionary.MorphologicalProcessor;
 import net.sf.extjwnl.util.factory.NameValueParam;
 import opennlp.tools.parser.Parse;
+import com.hitorro.util.basefile.tools.EnvBaseFiles;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -54,9 +54,9 @@ public class HTJWNLDictionary {
 	private final MorphologicalProcessor morphy;
 
 	HTJWNLDictionary() throws JWNLException, IOException {
-		String xmlConfig = Env.getWordnetDirectory().getChild("file-properties.xml").readString();
+		String xmlConfig = EnvBaseFiles.getWordnetDirectory().getChild("file-properties.xml").readString();
 		ObjectNode on = JsonNodeFactory.instance.objectNode();
-		on.put("path", Env.getWordnetDirectory().getAbsolutePath());
+		on.put("path", EnvBaseFiles.getWordnetDirectory().getAbsolutePath());
 		String resolved = PropertiesUtil.resolveJsonVariable(xmlConfig, on);
 		ByteArrayInputStream bais = new ByteArrayInputStream(resolved.getBytes());
 		dict = Dictionary.getInstance(bais);

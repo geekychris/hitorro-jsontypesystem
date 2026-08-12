@@ -23,9 +23,9 @@ package com.hitorro.language;
 
 import com.hitorro.util.basefile.filters.FileExtension;
 import com.hitorro.util.basefile.fs.BaseFile;
-import com.hitorro.util.core.Env;
 import com.hitorro.util.core.string.Fmt;
 import com.hitorro.util.io.IOUtil;
+import com.hitorro.util.basefile.tools.EnvBaseFiles;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -57,7 +57,7 @@ public class LanguageId {
 		//Configuration config = new Configuration(false);
 		//config.setInt("lang.analyze.max.length", 5000);
 		//lid = new LanguageIdentifier(config);
-		BaseFile dir = Env.getDataBaseFile().getChild("text/langid");
+		BaseFile dir = EnvBaseFiles.getDataBaseFile().getChild("text/langid");
 		try {
 			BaseFile[] ngrams = dir.listFiles();
 			for (BaseFile f : ngrams) {

@@ -28,6 +28,7 @@ import com.hitorro.util.core.classes.ClassUtil;
 import com.hitorro.util.core.map.MapUtil;
 import com.hitorro.util.io.FileUtil;
 import org.tartarus.snowball.SnowballProgram;
+import com.hitorro.util.basefile.tools.MapUtilCSV;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +47,7 @@ public class StemmerFixup extends com.hitorro.language.tableaddons.TableFixup {
 			Log.lang.error("Unable to find stemmer csv file %s", s);
 			return false;
 		}
-		stemmers = MapUtil.getMapFromKeyValueCSV(s, "iso639code", "stemmer");
+		stemmers = MapUtilCSV.getMapFromKeyValueCSV(s, "iso639code", "stemmer");
 		for (Map.Entry<String, String> ent : stemmers.entrySet()) {
 			Class c = ClassUtil.getClassForName(ent.getValue(), SnowballProgram.class);
 			if (c == null) {
