@@ -47,6 +47,8 @@ class GroovyTransformMapperTest {
 		generatorsDir = new File("config/generators");
 		if (!generatorsDir.exists()) {
 			generatorsDir = new File("hitorro-util/config/generators");
+			if (!generatorsDir.exists()) generatorsDir = new File("../config/generators");
+			if (!generatorsDir.exists()) generatorsDir = new File("../hitorro-util/config/generators");
 		}
 	}
 

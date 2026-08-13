@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.hitorro.language.SnowballSimpleStemmerTest
+-------------------------------------------------------------------------------
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.588 s -- in com.hitorro.language.SnowballSimpleStemmerTest

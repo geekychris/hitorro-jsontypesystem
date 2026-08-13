@@ -54,6 +54,8 @@ class TypeConfigIntegrityTest {
 		File dir = new File("config/types");
 		if (!dir.exists()) {
 			dir = new File("hitorro-util/config/types");
+			if (!dir.exists()) dir = new File("../config/types");
+			if (!dir.exists()) dir = new File("../hitorro-util/config/types");
 		}
 		return dir;
 	}
@@ -62,6 +64,8 @@ class TypeConfigIntegrityTest {
 		File dir = new File("config/schemas");
 		if (!dir.exists()) {
 			dir = new File("hitorro-util/config/schemas");
+			if (!dir.exists()) dir = new File("../config/schemas");
+			if (!dir.exists()) dir = new File("../hitorro-util/config/schemas");
 		}
 		return dir;
 	}

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.hitorro.jsontypesystem.executors.NewProjectionsTest$Materialize
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.hitorro.jsontypesystem.executors.NewProjectionsTest$Materialize

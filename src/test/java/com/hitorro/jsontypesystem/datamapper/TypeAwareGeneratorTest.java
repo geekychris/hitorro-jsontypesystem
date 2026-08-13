@@ -47,6 +47,8 @@ class TypeAwareGeneratorTest {
 	static void setup() {
 		File genDir = new File("config/generators");
 		if (!genDir.exists()) genDir = new File("hitorro-util/config/generators");
+		if (!genDir.exists()) genDir = new File("../config/generators");
+		if (!genDir.exists()) genDir = new File("../hitorro-util/config/generators");
 		generators = new DataGenerators(genDir);
 	}
 

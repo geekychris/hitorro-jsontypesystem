@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.hitorro.jsontypesystem.datamapper.TypeAwareGeneratorTest$MultipleGeneration
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.036 s -- in com.hitorro.jsontypesystem.datamapper.TypeAwareGeneratorTest$MultipleGeneration

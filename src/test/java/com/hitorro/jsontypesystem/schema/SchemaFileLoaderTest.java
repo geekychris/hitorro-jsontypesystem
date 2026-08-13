@@ -42,6 +42,8 @@ class SchemaFileLoaderTest {
 		File dir = new File("config/schemas");
 		if (!dir.exists()) {
 			dir = new File("hitorro-util/config/schemas");
+			if (!dir.exists()) dir = new File("../config/schemas");
+			if (!dir.exists()) dir = new File("../hitorro-util/config/schemas");
 		}
 		return dir;
 	}

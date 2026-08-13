@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.hitorro.jsontypesystem.schema.Type2JsonSchemaConverterTest
+-------------------------------------------------------------------------------
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 8, Time elapsed: 0 s -- in com.hitorro.jsontypesystem.schema.Type2JsonSchemaConverterTest

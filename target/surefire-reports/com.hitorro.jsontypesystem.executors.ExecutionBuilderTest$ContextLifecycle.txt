@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.hitorro.jsontypesystem.executors.ExecutionBuilderTest$ContextLifecycle
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in com.hitorro.jsontypesystem.executors.ExecutionBuilderTest$ContextLifecycle
