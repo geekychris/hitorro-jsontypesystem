@@ -170,6 +170,10 @@ public class Type extends BaseT implements TypeBaseIntf {
         return fetchLang;
     }
 
+    public JsonNode getNode() {
+        return node;
+    }
+
     public IndexSeeker getIndexSeeker() {
         return indexSeeker;
     }
