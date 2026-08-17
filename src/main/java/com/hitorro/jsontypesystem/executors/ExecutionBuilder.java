@@ -33,7 +33,18 @@ import java.util.Stack;
 
 public class ExecutionBuilder<E extends ExecutorAction> implements TypeVisitor<ExecutionBuilder> {
     ExecutionRow row;
-    private Map<Field, ExecutionNode> executors = new HashMap<>();
+    /**
+     * Dedup key for the compiled sub-tree at each path. Keyed by the
+     * full propaccess string (e.g. {@code title.mls}, {@code body.mls},
+     * {@code description.mls}) — NOT by {@link Field} identity — because
+     * the same Field instance is intentionally shared across multiple
+     * paths when a Type has more than one field of the same sub-Type
+     * (all three {@code core_mls}-typed fields on {@code sysobject}
+     * share the same {@code mls} Field instance from {@code core_mls}).
+     * Keying by identity dedup'd them prematurely and silently no-op'd
+     * enrichment on every path but the first-encountered.
+     */
+    private Map<String, ExecutionNode> executors = new HashMap<>();
     private ExecutorFactory<E> factory;
     private ExecutionNode<E> root = new ExecutionNode<>(null);
     private ExecutionNode<E> curr = root;
@@ -79,10 +90,13 @@ public class ExecutionBuilder<E extends ExecutorAction> implements TypeVisitor<E
         boolean visit = true;
         execStack.push(curr);
         row = curr.addField(field);
-        curr = executors.get(field);
+        // Snapshot the path — the visitor mutates Propaccess between calls,
+        // so we must copy the string value before caching.
+        String key = path.getPath();
+        curr = executors.get(key);
         if (curr == null) {
             curr = new ExecutionNode<>(field);
-            executors.put(field, curr);
+            executors.put(key, curr);
         } else {
             visit = false;
         }

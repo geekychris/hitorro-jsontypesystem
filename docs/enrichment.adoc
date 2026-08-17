@@ -1,0 +1,248 @@
+= JVS Enrichment
+:toc: left
+:toclevels: 3
+:sectnums:
+:source-highlighter: rouge
+
+The enrichment projection computes dynamic sub-fields (segmented
+sentences, POS tags, NER markup, normalized text, LLM translations,
+embeddings) on a JVS document by walking its type tree and invoking
+each field's `DynamicFieldMapper`.
+
+Related:
+xref:jvs-types.adoc[JVS Types] ·
+xref:../hitorro-mesh-pipelines/docs/pipeline-framework.adoc[Pipeline framework] ·
+xref:../hitorro-index/docs/lucene-integration.adoc[Indexing]
+
+== The mental model
+
+....
+JVS(doc, type)
+    │
+    ▼
+ProjectionExecutor.run(pc)     ─── driven by ExecutionBuilder(type, tagFilter)
+    │
+    ▼
+walk fields(type):
+  for each field:
+    row = curr.addField(field)
+    if not visited(field, path):
+       for each group in field.groups:                   ← group filter runs here
+         if predicate.test(group):
+           factory.getNew(field, group, path)            ← creates ExecutorAction
+       recurse into field.type
+....
+
+The output isn't a new document — it's the source `JVS` mutated in
+place. Dynamic fields land under the field they enrich (e.g.
+`title.mls[0].pos` populates from `title.mls[0].text`).
+
+== Two projection flavors
+
+`ProjectionEnrich` (`EnrichExecutionBuilderMapper`)::
+  Populates missing dynamic fields on the source. Idempotent — reruns
+  are safe. Called from pipeline `jvs-enrich` step and Fleet's
+  `FixupRetriever`.
+
+`ProjectionIndex` (`IndexExecutionBuilderMapper`)::
+  Feeds `JVSLuceneIndexWriter` — each field gets a Lucene projection
+  per its `Group.method`. Also fills any missing dynamic fields on the
+  way through so the index carries the enriched view.
+
+`ProjectionRemove` (`RemoveExecutionBuilderMapper`)::
+  Third phase — clears dynamic fields when you want to shrink the doc
+  before persisting. Used by the DMS layer, not typically by the mesh.
+
+== Tag filtering [[tag-filtering]]
+
+Every projection accepts a `Predicate<BaseT>` that gates which `Group`s
+participate. The standard filter is by `Group.tags`:
+
+[source,java]
+----
+Set<String> requested = Set.of("basic", "segmented", "pos", "ner");
+Predicate<BaseT> filter = GroupTagPredicates.anyOfOrUntagged(requested);
+
+EnrichExecutionBuilderMapper mapper = new EnrichExecutionBuilderMapper();
+mapper.setPredicate(mapper.getPredicate().and(filter));
+----
+
+`anyOfOrUntagged` runs a group if:
+
+* its `tags` intersects the requested set (`anyOf`), OR
+* it has no tags at all (untagged — always runs)
+
+Available factory helpers on `GroupTagPredicates`:
+
+* `anyGroup()` — every group, regardless of tags
+* `anyOf(Set)` — groups matching any of the tags
+* `untagged()` — groups with no tags declared
+* `anyOfOrUntagged(Set)` — the common enrich pattern (above)
+
+== Dynamic field mappers
+
+A `DynamicFieldMapper` computes a `JsonNode` from the source JVS at a
+given path. Signature:
+
+[source,java]
+----
+public abstract JsonNode map(JVS jvs, Propaccess pa, int depth);
+----
+
+Base class handles reading the mapper's declared input fields via
+`getValues(jvs, pa, depth)`. Fields declared with a leading dot
+(`.text`, `.lang`) are relative to the current path; absolute paths
+resolve from the root.
+
+Shipped mappers (all in `com.hitorro.jsontypesystem.dynamic`):
+
+[cols="2,3,3", options="header"]
+|===
+| Mapper                      | Reads             | Emits
+| `NormalizedText`            | `.text`           | `clean` — HTML-scrubbed, whitespace-collapsed, lowercased
+| `NormalizedTextHash`        | `.clean`          | `clean_normhash` — long hash for dedup/change detection
+| `SentenceSegmenter`         | `.clean`, `.lang` | `segmented` — one sentence per line (OpenNLP `<lang>.sent.bin`)
+| `POSTokenizer`              | `.segmented`, `.lang` | `pos` — `word_TAG` per token (OpenNLP `<lang>.pos-maxent.bin`)
+| `NERMarkupMapper`           | `.segmented`, `.lang` | `segmented_ner` — inline markup like `<LOCATION>London</LOCATION>`
+| `SnowballStemmer`           | `.clean`, `.lang` | `stemmed` — Snowball stem per token
+| `WordNetSynsets`            | `.stemmed`, `.lang` | `synsets` — WordNet synset IDs (English only)
+| `TranslationMapper`         | `.text`, `.lang` (config target)  | new `mls[]` entry with translated `text`, computed via `AIOperations`
+|===
+
+`AIOperations` is a JVS-facing interface implemented by
+`HttpOllamaClient` (in this module) and `OllamaAIService` (in
+`hitorro-spring-boot-autoconfigure`). Both provide `translate()`,
+`summarize()`, `ask()`, `isAvailable()`.
+
+== Attaching a mapper to a type
+
+In the type's `Group`, add a `dynamic` block with the mapper's
+implementation class name and its config fields:
+
+[source,json]
+----
+{
+  "name": "segmented",
+  "method": "text",
+  "tags": ["segmented"],
+  "dynamic": {
+    "class": "com.hitorro.jsontypesystem.dynamic.SentenceSegmenter",
+    "fields": [".clean", ".lang"]
+  }
+}
+----
+
+The `fields` array configures the mapper's `getValues` inputs. Order
+matches the mapper's expected argument list.
+
+== The projection cache
+
+Building an `ExecutionBuilder` for a given `(Type, tagPredicate)` is
+work — you don't want to redo it per row. Cache it on the type:
+
+[source,java]
+----
+String cacheKey = "JvsEnrich:" + String.join(",", tags);
+HashCache<Type, ExecutionBuilder> cache =
+        Type.getExecBuilderCache(cacheKey, mapper);
+
+// Per-row:
+JVS jvs = new JVS(row);
+if (jvs.getType() == null) jvs.setType(fallbackType);
+ProjectionContext pc = new ProjectionContext();
+pc.source = jvs;
+pc.target = new JVS();
+ExecutionBuilder builder = cache.get(jvs.getType());
+if (builder != null && builder.getCurrentNode() != null) {
+    builder.getCurrentNode().project(pc);
+}
+----
+
+That's exactly what `JvsEnrichStepAdapter` does. See the class in
+`hitorro-mesh-pipelines-jvstype`.
+
+== Field visitor identity bug (historical) [[visitor-fix]]
+
+**Fixed** — `ExecutionBuilder.enterField` used to dedup by `Field`
+instance. Types with multiple fields of the same sub-Type (e.g.
+`sysobject.title`, `.body`, `.description` all `core_mls`) all
+reference the SAME shared `mls` Field instance from `core_mls`, so
+identity-keyed dedup made the second/third occurrences skip sub-field
+traversal — silently dropping enrichment on all but the first path.
+
+The fix keys by `(path, field)` tuple via `path.getPath()`. Now every
+`mls`-carrying field enriches independently.
+
+== Model files — where they live
+
+....
+$HT_BIN/data/opennlpmodels1.5/
+├── en-sent.bin
+├── en-token.bin
+├── en-pos-maxent.bin
+├── en-ner-person.bin
+├── en-ner-location.bin
+├── en-ner-organization.bin
+├── en-ner-date.bin
+├── en-ner-money.bin
+├── es-sent.bin
+├── ...
+└── <9 langs total>
+
+$HT_BIN/data/opennlpmodels-onnx/
+└── ner-multilingual/            ← optional ONNX transformer NER, one model for all langs
+    └── model.onnx
+....
+
+Install ONNX models via `./download-onnx-models.sh` at the repo root
+(needs Python 3.8+ for HuggingFace download). NER falls back
+`MaxEnt → ONNX` automatically when `<lang>-ner-*.bin` is missing.
+
+If a model file is missing for a language, the mapper logs and returns
+`null` for that field — the row still flows.
+
+== Debugging enrichment
+
+Set `-Dhitorro.dynamic.trace=1` to instrument `DynamicFieldMapper.getValues`
+and `Field.visit`. Output goes to stderr:
+
+....
+[field.visit] title path=title groupCount=2
+[field.visit] title.mls path=title.mls groupCount=1
+[getValues] SentenceSegmenter: clean="London Heathrow announced..." lang="en"
+[field.visit] title.mls.segmented path=title.mls.segmented groupCount=0
+[getValues] POSTokenizer: segmented="London Heathrow announced..." lang="en"
+[field.visit] title.mls.pos path=title.mls.pos groupCount=0
+...
+....
+
+If a field isn't enriching:
+
+1. Confirm the projection built for it — trace should show
+   `[field.visit] <path> groupCount>=1`
+2. Confirm the mapper input fields resolve — trace shows
+   `[getValues] <mapper>: <field>="<value>"` (empty means the mapper
+   silently no-ops)
+3. Check the `.lang` field is populated on the mls entry — the model
+   selector needs it
+4. Check the OpenNLP model file exists for that lang
+
+== Extension recipe
+
+To add your own enrichment (e.g. sentiment scoring):
+
+1. Implement `DynamicFieldMapper.map(jvs, pa, depth)` returning your
+   computed `JsonNode`
+2. If you need Ollama / an LLM, take an `AIOperations` in the
+   constructor
+3. Reference from a type Group:
++
+[source,json]
+----
+{ "name": "sentiment_score", "method": "double", "tags": ["sentiment"],
+  "dynamic": {
+    "class": "com.example.SentimentScorer",
+    "fields": [".clean", ".lang"]
+  } }
+----
+4. Run enrichment with your tag: `mapper.setPredicate(...tags: [sentiment]…)`

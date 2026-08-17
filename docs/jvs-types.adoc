@@ -1,0 +1,279 @@
+= JVS Types
+:toc: left
+:toclevels: 3
+:sectnums:
+:source-highlighter: rouge
+
+**JVS** — the JSON-Value-with-Schema wrapper — is HiTorro's universal
+typed-document abstraction. Every document that flows through indexing,
+enrichment, retrieval, or the mesh SQL surface is either a `JVS`
+directly or a `JsonNode` that a downstream stage wraps as one.
+
+This doc explains how the type model works, how you author a type, and
+how the type registry (`JsonTypeSystem`) resolves cross-type references
+at runtime.
+
+Related:
+xref:enrichment.adoc[Enrichment] ·
+xref:../hitorro-index/docs/lucene-integration.adoc[Indexing] ·
+xref:../hitorro-util/docs/TYPE_SYSTEM.md[Deep-dive] ·
+xref:../hitorro-util/docs/DATA_MAPPER.md[Transform DSL]
+
+== The four building blocks
+
+....
+Type ─── contains ──▶ Field ─── declares ──▶ Type  (recursive)
+                       │
+                       └── has 0..N ──▶ Group   (roles / method / tags)
+                       │
+                       └── optional 0..1 ─▶ DynamicFieldMapper   (computed sub-fields)
+....
+
+`Type`::
+  A named record shape. Has `fields[]`, an optional `supertype` (fields
+  merged in), and an optional `primitiveType` for leaf scalars
+  (`core_string`, `core_long`, ...).
+
+`Field`::
+  A named slot on a `Type` that points to a sub-`Type`. Also flags:
+  `vector` (array of the sub-type), `i18n` (per-language content),
+  `dynamic` (references a `DynamicFieldMapper` implementation).
+
+`Group`::
+  A role decoration attached to a `Field`. Carries a `method`
+  (`identifier`, `text`, `long`, `mls`, `key_term`, ...) that tells
+  downstream engines how to project the field. Groups can also carry
+  `tags[]` used to select subsets of the projection tree (e.g. enrich
+  only the `[basic, segmented]` groups).
+
+`DynamicFieldMapper`::
+  Attached to a `Group` via its `dynamic` sub-object; called by the
+  enrichment engine to compute the field value on demand. See
+  xref:enrichment.adoc[Enrichment].
+
+== A typed document in JSON
+
+Type file `demo_article.json`:
+
+[source,json]
+----
+{
+  "name": "demo_article",
+  "supertype": "sysobject",
+  "fields": [
+    { "name": "country", "type": "core_string",
+      "groups": [{ "name": "index", "method": "identifier" }] },
+    { "name": "category", "type": "core_string", "vector": true,
+      "groups": [{ "name": "index", "method": "key_term" }] }
+  ]
+}
+----
+
+`sysobject` is the standard supertype that gives you `id: core_id`,
+`title: core_mls`, `body: core_mls`, `description: core_mls`, `times:
+core_dates` for free.
+
+A document conforming to this type:
+
+[source,json]
+----
+{
+  "type": "demo_article",
+  "id":       { "domain": "articles", "did": "a1", "id": "articles/a1" },
+  "title":    { "mls": [{ "lang": "en", "text": "London Heathrow expansion" }] },
+  "body":     { "mls": [{ "lang": "en", "text": "London Heathrow Airport announced ..." }] },
+  "times":    { "created": "2026-01-01T00:00:00Z", "modified": "2026-01-01T00:00:00Z" },
+  "country":  "GB",
+  "category": ["news"]
+}
+----
+
+Wrap it as a JVS in Java:
+
+[source,java]
+----
+JsonNode raw = mapper.readTree(json);
+JVS jvs = new JVS(raw);
+// Optionally force a specific Type (skip JsonTypeSystem lookup):
+jvs.setType(myType);
+// Or let it resolve via the "type" field:
+if (jvs.getType() == null) jvs.setType(fallbackType);
+----
+
+== Core primitive types
+
+Every deployment ships these in `config/types/`:
+
+[cols="2,3,4", options="header"]
+|===
+| Name          | JSON shape                                    | Typical use
+| `core_string` | `"..."`                                       | scalar text, no analysis
+| `core_long`   | `42`                                          | 64-bit integer, range-queryable
+| `core_double` | `3.14`                                        | 64-bit float
+| `core_boolean`| `true`                                        | flag
+| `core_id`     | `{domain, did, id}`                           | compound identifier — enables partition-by-domain, KV-lookup-by-did
+| `core_mls`    | `{mls: [{lang, text, clean, segmented, ...}]}`| multi-language content — enrichment target
+| `core_mlselem`| `{lang, text, clean, segmented, pos, segmented_ner}` | one language variant of `core_mls`
+| `core_dates`  | `{created, modified, expires?}`               | audit timestamps
+| `core_geo`    | `{lat, lon, geohash?}`                        | point geometry
+|===
+
+Author your own by dropping a new `.json` under `config/types/`. The
+singleton `JsonTypeSystem` auto-loads at startup via
+`Name2JsonMapper` scanning of the directory.
+
+== The Group model
+
+A `Group` is one row of behavior a `Field` participates in. Fields can
+carry multiple groups (e.g. `text` for full-text search AND `identifier`
+for exact-match faceting).
+
+Shape:
+
+[source,json]
+----
+{ "name": "index",
+  "method": "text",
+  "default": true,
+  "tags": ["basic"] }
+----
+
+Recognized `method` values (extendable via `config/implementations.json`):
+
+[cols="1,3", options="header"]
+|===
+| Method          | Downstream effect
+| `identifier`    | Lucene `StringField` (indexed, not analyzed); routable partition key
+| `text`          | Lucene `TextField` with language-aware analyzer chain
+| `long`          | Lucene `LongPoint` (range-queryable) + `SortedNumericDocValues`
+| `double`        | Lucene `DoublePoint`
+| `boolean`       | Lucene `StringField("true"/"false")`
+| `mls`           | Iterates `mls[]`, projects each `lang` variant with the right analyzer
+| `key_term`      | Analyzed but preserves case for facet aggregation
+| `geo`           | Lucene `LatLonPoint` + `LatLonDocValuesField`
+| `dates`         | Two `LongPoint`s for created/modified plus a stored ISO string
+|===
+
+Tags::
+  Free-form strings that select a subset of the projection tree. The
+  enrichment engine takes `tags: [basic, segmented, pos, ner]` and only
+  visits `Group`s whose `tags` intersects (or that have no tags — the
+  default). See
+  xref:enrichment.adoc#tag-filtering[enrichment tag filtering].
+
+== JsonTypeSystem — the registry
+
+`com.hitorro.jsontypesystem.JsonTypeSystem` is a JVM-wide singleton.
+At startup it loads every `.json` under `$HT_BIN/config/types/` and
+resolves cross-type references (a `Field.type: "core_mls"` looks up the
+`core_mls` type from the registry).
+
+[source,java]
+----
+Type sysobj = JsonTypeSystem.getMe().getType("sysobject");
+Type mine   = JsonTypeSystem.getMe().getType("demo_article");
+----
+
+For applications not driven by `$HT_BIN` (e.g. mesh pipeline steps
+loading a type via `TypeJsonLoader.load("classpath:/types/…")`):
+
+[source,java]
+----
+JsonNode typeJson = TypeJsonLoader.load("classpath:/types/demo_article.json");
+Type type = new Type();
+type.init(typeJson);
+// This local type is NOT in the registry — sub-type references still
+// resolve against JsonTypeSystem. If your type uses non-core sub-types
+// that aren't registered, pre-register them or let the pipeline step
+// call JsonTypeSystem.getMe().getType(name).
+----
+
+`TypeJsonLoader` accepts `file:`, `classpath:`, `http(s)://`, or bare
+paths. It's the single source of truth for URL scheme dispatch — every
+pipeline adapter that loads a type routes through it.
+
+== Vector fields
+
+`vector: true` means the field is an array of its sub-type:
+
+[source,json]
+----
+{ "name": "category", "type": "core_string", "vector": true,
+  "groups": [{ "name": "index", "method": "key_term" }] }
+----
+
+Serialized:
+
+[source,json]
+----
+"category": ["news", "sports", "tech"]
+----
+
+The projection engine iterates the array; the Lucene indexer emits one
+`StringField` per element.
+
+== The `mls[]` shape
+
+`core_mls` is the standard multi-language container:
+
+[source,json]
+----
+"title": {
+  "mls": [
+    { "lang": "en", "text": "London Heathrow expansion" },
+    { "lang": "es", "text": "Expansión del Aeropuerto de Londres" }
+  ]
+}
+----
+
+Each `mls[]` entry is a `core_mlselem` with:
+
+* `lang` — ISO 639-1 code (used by the analyzer registry)
+* `text` — raw text
+* `clean` — dynamic: normalized (HTML-scrubbed, whitespace-collapsed)
+* `segmented` — dynamic: one sentence per line from `SentenceSegmenter`
+* `pos` — dynamic: `POSTokenizer` output (`word_TAG` per token)
+* `segmented_ner` — dynamic: `NERMarkupMapper` output with inline
+  `<LOCATION>...</LOCATION>` `<PERSON>...</PERSON>` etc.
+
+_None of the `dynamic:` sub-fields are stored on disk_ — they're
+computed by the enrichment engine on demand. See
+xref:enrichment.adoc[Enrichment].
+
+Field visitor note: because `mls` on `core_mls` is a SHARED `Field`
+instance across every field of type `core_mls` (title, body,
+description), the projection engine deduplicates by `(path, field)`
+tuple — not by field identity — so all three get properly traversed.
+Fixed in a recent core change; see `ExecutionBuilder.enterField`.
+
+== Author your own type — checklist
+
+1. Create `config/types/my_type.json` (or add to the shipped
+   `hitorro-jsontypesystem/src/main/resources/types/`).
+2. Extend `sysobject` if you want id/title/body/times for free.
+3. For each domain field, decide:
+   - primitive sub-type (`core_string`, `core_long`, ...) or a compound?
+   - single value or `vector: true`?
+   - which `Group`s? At minimum add one to the `index` group so
+     the field lands in Lucene.
+4. If you want dynamic enrichment: add a `Group` with `tags: [basic,
+   segmented, pos, ner]` (or subsets), and reference a
+   `DynamicFieldMapper` implementation via `dynamic: {…}`.
+5. Test with `JsonTypeSystem.getMe().getType("my_type").visit(...)` in
+   a JUnit test — the built-in `ExecutionBuilderMapper` will report if
+   any sub-type references are unresolved.
+
+== Extending the type system
+
+Adding a new primitive method (e.g. a custom Lucene field type)::
+  Register a `Method` implementation and reference it from your Group's
+  `method` field. See `hitorro-index` for how the projection maps
+  methods to Lucene field types.
+
+Adding a new base type (like a new `core_*`)::
+  Ship a `config/types/my_core.json`. Import it in downstream types via
+  `Field.type: "my_core"`.
+
+Adding a new dynamic mapper::
+  Implement `DynamicFieldMapper` and reference from a `Group.dynamic`
+  block. See xref:enrichment.adoc[Enrichment].
