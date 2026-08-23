@@ -135,34 +135,61 @@ public class NERMarkupMapper extends DynamicFieldMapper {
         }
     }
 
+    /**
+     * Build a marked-up sentence in the canonical Hitorro NER format
+     * — {@code [{token&&NE_Type}]} per entity token. Multi-token
+     * entities expand into one bracket per token so the downstream
+     * {@link com.hitorro.basetext.NERMarkupTokenFilter} (in
+     * hitorro-text-core) tokenises each entity term at the right
+     * position and emits both the surface form AND the {@code NE_Type}
+     * marker as position-zero increments.
+     *
+     * <p>Historical note: an earlier revision of this class emitted
+     * XML-ish {@code <person>...</person>} tags. That is not the format
+     * the downstream analyzer chain parses — searches for
+     * {@code NE_Person} etc. only matched if the literal string appeared
+     * verbatim in the text. Fixed to bracket format so NER-facet queries
+     * via {@code segmented_ner.textmarkup_en_m:NE_Person} actually match
+     * extracted entities. Also matches what
+     * {@link com.hitorro.basetext.NamedEntityMarkupFilter} in the legacy
+     * enrichment path produces, so both enrichment paths interoperate.</p>
+     */
     private String buildMarkup(String[] tokens, List<TaggedSpan> spans) {
         StringBuilder sb = new StringBuilder();
-        // Sort spans by start position
+        // Sort spans by start position so a left-to-right walk is
+        // monotonic. Overlapping spans from different finders get
+        // last-write-wins on the label (fine — token still emits).
         spans.sort((a, b) -> Integer.compare(a.span.getStart(), b.span.getStart()));
 
-        int pos = 0;
+        // Per-token label (canonicalised, or null for plain tokens).
+        String[] labelPerToken = new String[tokens.length];
         for (TaggedSpan ts : spans) {
-            // Add tokens before this span
-            for (int i = pos; i < ts.span.getStart(); i++) {
-                if (sb.length() > 0) sb.append(" ");
-                sb.append(tokens[i]);
+            String canon = canonicalLabel(ts.label);
+            for (int i = ts.span.getStart(); i < ts.span.getEnd() && i < tokens.length; i++) {
+                labelPerToken[i] = canon;
             }
-            // Add tagged entity
-            if (sb.length() > 0) sb.append(" ");
-            sb.append("<").append(ts.label).append(">");
-            for (int i = ts.span.getStart(); i < ts.span.getEnd(); i++) {
-                if (i > ts.span.getStart()) sb.append(" ");
-                sb.append(tokens[i]);
-            }
-            sb.append("</").append(ts.label).append(">");
-            pos = ts.span.getEnd();
         }
-        // Add remaining tokens
-        for (int i = pos; i < tokens.length; i++) {
-            if (sb.length() > 0) sb.append(" ");
-            sb.append(tokens[i]);
+
+        for (int i = 0; i < tokens.length; i++) {
+            if (i > 0) sb.append(" ");
+            String label = labelPerToken[i];
+            if (label != null) {
+                sb.append("[{").append(tokens[i]).append("&&").append(label).append("}]");
+            } else {
+                sb.append(tokens[i]);
+            }
         }
         return sb.toString();
+    }
+
+    /** OpenNLP span types come lowercased ({@code person},
+     *  {@code organization}); NamedEntityMarkupFilter emits
+     *  {@code NE_Person} etc. Canonicalise so both enrichment paths
+     *  produce interchangeable output. */
+    private static String canonicalLabel(String raw) {
+        if (raw == null || raw.isEmpty()) return "NE_Misc";
+        if (raw.startsWith("NE_")) return raw;
+        return "NE_" + Character.toUpperCase(raw.charAt(0)) + raw.substring(1).toLowerCase();
     }
 
     /**
