@@ -52,7 +52,8 @@ already ship:
 | **Version** | An immutable snapshot of a document at one point in time. Every version has its own version id + a `version_label` ("1.0", "1.1", "2.0-alpha") and points at its predecessor. Versions of the same document share a canonical id. |
 | **Head** | The current "live" version of a document. Not always the highest-numbered version (branches can diverge). Stored under `d:{canonical_id}` as a pointer. |
 | **Reference** | A directed edge from one document (at a specific version, or at "current") to another, with a type ("supersedes", "cites", "attached-to", …) and optional aux data. |
-| **Folder** | A named container that lists documents by canonical id. Folders can nest. Modelled as first-class documents themselves — a folder IS a document with a specific type. |
+| **Folder** | A named container that lists documents by canonical id. Folders can nest (via folder-to-folder membership entries). A folder is itself a document with `content_type: "folder"`, so folders have versions, ACLs, references, etc. just like any doc. |
+| **Folder membership** | The link between a document and a folder. A single document can be linked into **any number of folders** simultaneously; membership is stored as small sibling KV records (`f|folder|child` + `df|child|folder`), not on the document body — so linking/unlinking doesn't rewrite either side. |
 | **ACL** | Access-control entries scoped to a document + a principal (user/group/role) + a permission (read/write/delete/…). Application-evaluated on read/write. |
 | **Rendition** | One view of a document's content — its primary bytes, a thumbnail, an extracted-text version, a transcript, an OCR pass. Each rendition has a `role` name and points at a content blob by sha256. |
 | **Content ref** | One entry in a document's rendition manifest. Points at a binary blob (KV for small, MinIO/S3 for large) via content-address (sha256). Manifest is copy-on-write across versions: shared until a specific rendition is replaced. |
@@ -69,27 +70,34 @@ field is optional at the JVS level (the DMS service enforces semantics).
   "name": "document",
   "extends": "sysobject",
   "fields": [
-    {"name": "canonical_id",   "type": "core_id",     "doc": "Stable across all versions of this document."},
-    {"name": "version_label",  "type": "core_string", "doc": "Human tag: '1.0', '1.1', '2.0-alpha'."},
-    {"name": "version_major",  "type": "core_long"},
-    {"name": "version_minor",  "type": "core_long"},
-    {"name": "version_kind",   "type": "core_string", "doc": "'major', 'minor', 'branch', 'draft'."},
-    {"name": "parent_version", "type": "core_id",     "doc": "Direct predecessor version id (null for v1)."},
-    {"name": "branch_of",      "type": "core_id",     "doc": "Non-null when this is the tip of a branch."},
+    {"name": "canonical_id",       "type": "core_id",     "doc": "Stable across all versions of this document."},
 
-    {"name": "references",     "type": "array<core_reference>"},
-    {"name": "parent_folder",  "type": "core_id",     "doc": "Canonical id of the containing folder; null = root."},
-    {"name": "acls",           "type": "array<core_acl>"},
-    {"name": "content_refs",   "type": "array<core_content_ref>"},
+    {"comment": "--- version identity (queryable — see 'Version labeling' section) ---"},
+    {"name": "version_label",      "type": "core_string", "doc": "Canonical assembled label: '2.1.3', '2.1.3-alpha+build42'. Indexed as identifier for exact match."},
+    {"name": "version_major",      "type": "core_long",   "doc": "Semver-style major. Range-queryable."},
+    {"name": "version_minor",      "type": "core_long"},
+    {"name": "version_patch",      "type": "core_long"},
+    {"name": "version_qualifier",  "type": "core_string", "doc": "Pre-release tag: 'alpha' / 'beta' / 'rc' / 'draft' / 'hotfix'. Null = stable release. Indexed as identifier."},
+    {"name": "version_qual_number","type": "core_long",   "doc": "Numeric suffix on the qualifier — 'alpha3' → 3. Range-queryable within a qualifier."},
+    {"name": "version_build",      "type": "core_long",   "doc": "Monotonic build number across the whole canonical_id lineage. Guarantees a total order even when labels tie."},
+    {"name": "version_kind",       "type": "core_string", "doc": "'release' / 'draft' / 'branch' / 'hotfix'. Coarser than qualifier — used for lifecycle queries."},
+    {"name": "parent_version",     "type": "core_id",     "doc": "Direct predecessor version id (null for v1)."},
+    {"name": "branch_of",          "type": "core_id",     "doc": "Non-null when this is the tip of a branch — points at the version being branched from."},
+    {"name": "is_head",            "type": "core_boolean","doc": "Denormalised for query efficiency: this is the current head for its branch."},
+    {"name": "is_stable",          "type": "core_boolean","doc": "version_qualifier == null. Denormalised so 'stable releases only' filters in Lucene without a NOT clause."},
 
-    {"name": "created_by",     "type": "core_string"},
-    {"name": "modified_by",    "type": "core_string"},
-    {"name": "content_type",   "type": "core_string", "doc": "'folder', 'wiki-page', 'photo', …"},
+    {"comment": "--- content (mutates with version; may split per rendition — see 'Multi-rendition content model') ---"},
+    {"name": "content_refs",       "type": "array<core_content_ref>"},
 
-    {"name": "checked_out_by", "type": "core_string", "doc": "Non-null while a check-out is active."},
-    {"name": "checked_out_at", "type": "core_date"},
+    {"comment": "--- author + type ---"},
+    {"name": "created_by",         "type": "core_string"},
+    {"name": "modified_by",        "type": "core_string"},
+    {"name": "content_type",       "type": "core_string", "doc": "'folder', 'wiki-page', 'photo', 'video', …"},
 
-    {"name": "tombstoned",     "type": "core_boolean","doc": "Soft-delete marker."}
+    {"comment": "--- lifecycle ---"},
+    {"name": "checked_out_by",     "type": "core_string", "doc": "Non-null while a check-out is active. Stored on doc for query but authoritative lease is co|{canonical}."},
+    {"name": "checked_out_at",     "type": "core_date"},
+    {"name": "tombstoned",         "type": "core_boolean","doc": "Soft-delete marker."}
   ]
 }
 ```
@@ -97,6 +105,12 @@ field is optional at the JVS level (the DMS service enforces semantics).
 Inherits `id`, `times`, `title`, `body`, `description` from
 `core_sysobject`. `id` here is the *version* id; `canonical_id` is the
 *document* id.
+
+**What is NOT on the document body:** references, folder memberships,
+ACLs, tags. These change on independent lifecycles, are queried by
+many parties, and would force a whole-document rewrite every time
+one changed. They live in sibling keyspaces and secondary indexes —
+see [Minimal-update principle](#minimal-update-principle) below.
 
 ### `core_reference.json`
 
@@ -148,6 +162,72 @@ Inherits `id`, `times`, `title`, `body`, `description` from
 }
 ```
 
+## Version labeling
+
+Semver-inspired scheme, parsed into structured fields so every part is
+individually queryable via mesh SQL against the Lucene index.
+
+### Canonical label grammar
+
+```
+version_label ::= MAJOR "." MINOR "." PATCH ( "-" QUALIFIER QUAL_NUMBER? )? ( "+" BUILD )?
+                  1.0.0
+                  1.0.0-alpha
+                  1.0.0-alpha3
+                  2.1.4-hotfix1+build812
+```
+
+The DMS service assembles `version_label` from the numeric + qualifier
+parts at check-in — clients supply the semantic bump ("major",
+"minor", "patch", "draft") + optional qualifier; the service picks
+the actual numbers based on the previous head.
+
+### The eight version fields
+
+| Field | Type | Query surface |
+|---|---|---|
+| `version_label` | identifier | Exact match: `WHERE version_label = '2.1.3'` |
+| `version_major` | long (point) | Range: `WHERE version_major = 2`; `WHERE version_major >= 3` |
+| `version_minor` | long (point) | Range: `WHERE version_major = 2 AND version_minor >= 1` |
+| `version_patch` | long (point) | Range: `WHERE version_patch = 0` (major/minor releases only) |
+| `version_qualifier` | identifier | Facet: `WHERE version_qualifier = 'alpha'`; `IS NULL` for stable |
+| `version_qual_number` | long (point) | Range within a qualifier: `qualifier='rc' AND qual_number>=3` |
+| `version_build` | long (point) | Total order across the whole lineage. Useful as a tiebreaker or for "latest N" queries |
+| `version_kind` | identifier | Coarse-grain facet: `WHERE version_kind IN ('release','hotfix')` |
+| `is_head` (denorm) | boolean | `WHERE is_head = true` for "current only" |
+| `is_stable` (denorm) | boolean | `WHERE is_stable = true` for "no drafts" |
+
+### Query examples
+
+```sql
+-- All heads at v2.x, stable releases only
+SELECT canonical_id, version_label, title
+FROM documents
+WHERE is_head = true AND version_major = 2 AND is_stable = true
+
+-- Latest stable of every doc (max version_build per canonical_id)
+SELECT canonical_id, MAX(version_build) AS build
+FROM documents
+WHERE is_stable = true
+GROUP BY canonical_id
+
+-- All v2 alphas, ordered by qualifier number
+SELECT version_label, canonical_id
+FROM documents
+WHERE version_major = 2 AND version_qualifier = 'alpha'
+ORDER BY version_qual_number ASC
+
+-- Draft versions authored this week
+SELECT canonical_id, version_label, created_by
+FROM documents
+WHERE version_kind = 'draft' AND times.created_s >= 1788000000
+```
+
+`version_build` is the escape hatch when labels tie or when you just
+want a monotonic ordering — every check-in against a `canonical_id`
+gets `previous_build + 1`, so `MAX(version_build)` always identifies
+the most recent version regardless of the label scheme.
+
 ## Storage layout
 
 The **KV store is authoritative**. Every doc, every version, every
@@ -156,48 +236,170 @@ a derived index — losing Lucene is "rebuild from KV," not "data loss."
 
 ### Key encoding
 
-Prefix-namespaced ASCII, `|` as delimiter:
+Prefix-namespaced ASCII, `|` as delimiter. **Every entity that mutates
+on an independent lifecycle gets its own keyspace** — the design goal
+is that no operation touches more than one small object per agent
+(see [Minimal-update principle](#minimal-update-principle) below).
 
-| Key pattern | Value | Purpose |
-|---|---|---|
-| `d\|{canonical_id}` | version id | Current head version pointer |
-| `v\|{canonical_id}\|{version_label}` | JVS doc bytes | The version itself |
-| `v\|{canonical_id}\|` (prefix) | — | Prefix scan → all versions of a doc |
-| `l\|{canonical_id}\|{version_id}` | version_label | Reverse lookup (version_id → label) |
-| `r\|{from_canonical}\|{kind}\|{to_canonical}` | reference metadata | Outbound references from `from` |
-| `br\|{to_canonical}\|{kind}\|{from_canonical}` | reference metadata | Inbound (back-references) — dual write |
-| `f\|{folder_canonical}\|{child_canonical}` | child metadata (title, kind, mtime) | Folder membership |
-| `co\|{canonical_id}` | check-out lease | Distributed check-out lock (see below) |
-| `t\|{canonical_id}` | tombstone marker | Soft-delete indicator |
+| Key pattern | Value | Owned by (agent) | Purpose |
+|---|---|---|---|
+| `d\|{canonical_id}` | version id | canonical's | Current head version pointer |
+| `v\|{canonical_id}\|{version_label}` | JVS doc bytes | canonical's | The version itself (content-defining fields only) |
+| `l\|{canonical_id}\|{version_id}` | version_label | canonical's | Reverse lookup (version_id → label) |
+| `r\|{from_canonical}\|{kind}\|{to_canonical}` | small ref record `{aux, created_at}` | from's | Outbound reference — one KV entry per edge |
+| `br\|{to_canonical}\|{kind}\|{from_canonical}` | same | to's | Back-reference — one KV entry per edge |
+| `f\|{folder_canonical}\|{child_canonical}` | small membership record `{added_at, added_by}` | folder's | Folder → child membership |
+| `df\|{child_canonical}\|{folder_canonical}` | small membership record | child's | Child → folder reverse membership (fast "which folders is this in?") |
+| `a\|{canonical_id}\|{principal_hash}` | small ACL record `{permission, grant, inherit_from}` | canonical's | One KV entry per (doc × principal) — write to add/revoke without touching the doc |
+| `g\|{principal}\|{canonical_id}` | permission | principal's | Reverse: "what can Alice touch?" — cheap prefix scan per user |
+| `co\|{canonical_id}` | check-out lease `{by, at, ttl}` | canonical's | Distributed check-out lock with expiry |
+| `t\|{canonical_id}` | tombstone marker | canonical's | Soft-delete indicator |
+| `b\|{sha256}` | blob metadata `{size, mime, first_seen_at}` | sha256's hash-partition | Content-addressed blob metadata |
+| `blob-body\|{sha256}` | raw bytes | sha256's hash-partition | Small/medium blob bytes (large → MinIO/S3) |
+| `tag\|{canonical_id}\|{tag}` | small tag record `{added_at}` | canonical's | Free-form tags — mutated independently of the doc body |
 
-**Prefix scans** cover the common list operations:
+**Prefix scans** are the workhorse:
 - `v|{canonical}|` — version history of one doc
-- `r|{canonical}|` — all outbound refs
-- `br|{canonical}|` — all inbound refs
+- `r|{canonical}|` — all outbound refs (optionally by kind: `r|{canonical}|cites|`)
+- `br|{canonical}|` — inbound refs
 - `f|{folder}|` — folder contents
+- `df|{child}|` — every folder this doc is in
+- `a|{canonical}|` — every ACL entry on this doc
+- `g|{principal}|` — every doc this principal has any permission on
+- `tag|{canonical}|` — tags on this doc
 
 **Composite key discipline** is the DMS service's job — `KVStore` itself
 doesn't know about secondary indexes.
 
-### Lucene fields
+### Lucene indexes
 
-The mesh pipeline writes every version to a Lucene index with these
-fields (via `JvsLuceneSink` + a JVS type json):
+**Three indexes**, kept separate so a change to any one doesn't rewrite
+the others:
+
+**1. `documents-idx`** — the primary index, keyed by `version_id`,
+written on check-in and on derived-rendition attachment. Fields:
 
 | Field | Method | Purpose |
 |---|---|---|
 | `canonical_id` | identifier | Exact-match filter |
 | `version_id` | identifier | Fetch a specific version |
-| `version_label` | identifier | Filter by "1.0", "2.0", … |
-| `is_head` | boolean | `WHERE is_head = true` for "current only" |
+| `version_label`, `version_major`, `version_minor`, `version_patch`, `version_qualifier`, `version_qual_number`, `version_build`, `version_kind`, `is_head`, `is_stable` | see [Version labeling](#version-labeling) | Rich version queries |
 | `title.mls.text_en_m` | fulltext (per language) | Full-text search |
 | `body.mls.text_en_m` | fulltext | Same |
 | `content_type` | identifier | Facet by kind |
-| `parent_folder` | identifier | Facet by folder |
 | `created_by`, `modified_by` | identifier | Author filters |
 | `times.created_s`, `times.modified_s` | date_s | Range filters |
-| `refs_to_kind_{kind}` | identifier (multi-valued) | "all docs that cite X" |
+| `content_refs.role` | identifier (multi-valued) | "docs that have a thumbnail" |
+| `content_refs.mime` | identifier (multi-valued) | "docs whose primary is video/*" |
 | `_source` | stored JSON | Reconstruct doc without KV round-trip |
+
+**2. `folder-membership-idx`** — one row per (folder, doc) edge.
+Fields: `folder_canonical`, `child_canonical`, `added_at`, `added_by`.
+Written when a doc is linked to a folder; NOT rewritten when the doc's
+body changes.
+
+**3. `acl-idx`** — one row per (doc, principal, permission) grant.
+Fields: `canonical_id`, `principal`, `permission`, `grant`,
+`inherit_from`. Written when an ACL is added/revoked; NOT rewritten
+when the doc's body changes.
+
+**Read-side joins.** "Docs Alice can read, in folder Engineering,
+matching 'kubernetes'":
+
+```sql
+SELECT d.canonical_id, d.title
+FROM documents-idx d
+JOIN folder-membership-idx f ON f.child_canonical = d.canonical_id
+JOIN acl-idx a               ON a.canonical_id   = d.canonical_id
+WHERE d.is_head = true
+  AND MATCH(d.body, 'kubernetes')
+  AND f.folder_canonical = 'folder-eng'
+  AND a.principal IN ('user:alice', 'group:eng', 'public')
+  AND a.permission = 'read'
+  AND a.grant = true
+```
+
+Mesh SQL handles the join at the driver; each agent scans its own
+partition of each index. The three indexes update independently — a
+new ACL doesn't touch `documents-idx`, a rename doesn't touch
+`acl-idx`.
+
+An alternative single-index model (denormalize principals + folders
+into `documents-idx`) trades read simplicity for write amplification:
+every ACL change rewrites the doc. For a system where ACLs and folder
+memberships mutate frequently while doc bodies are churn-heavy at
+version-bump time, the three-index model is the right split.
+
+## Minimal-update principle
+
+The design goal: **every mutation touches the smallest possible object
+graph.** Rewriting a whole document to add one reference or one ACL is
+a bug in the model.
+
+### The rule
+
+Fields on `core_document` are those that change **only** with a
+version bump:
+
+- Identity (canonical, version, parent_version, branch_of)
+- Content-defining metadata (title, body, description, created_by)
+- Rendition manifest (`content_refs` — mutable in place for
+  derived renditions, as explained in [Multi-rendition content model](#multi-rendition-content-model))
+
+Everything else that mutates on an independent schedule lives as a
+sibling KV record + secondary Lucene index:
+
+| Concern | Why externalized |
+|---|---|
+| References (`r|`, `br|`) | Adding a citation shouldn't force a new version. Refs mutate whenever any doc links to this one. |
+| Folder memberships (`f|`, `df|`) | Docs can be linked into multiple folders. Adding/removing folder membership is a nav operation, not a version-defining change. |
+| ACLs (`a|`, `g|`) | Access grants mutate on org changes, employee joins/leaves — many times more often than content bumps. |
+| Tags / categories (`tag|`) | Free-form user metadata. Mutated frequently, doesn't warrant a version. |
+| Check-out lease (`co|`) | Ephemeral (TTL-bounded), high write frequency during active editing. |
+
+### Cost of common operations under this model
+
+| Operation | Objects written | Notes |
+|---|---|---|
+| Rename a folder | 1 KV write (folder's own `v|`) | Docs reference folders by `canonical_id`; no dependent updates. |
+| Move doc A into folder F (add) | 2 KV writes (`f|F|A`, `df|A|F`) | Doc unchanged. |
+| Move doc A out of folder F | 2 KV deletes | Doc unchanged. |
+| Add reference A → B | 2 KV writes (`r|A|`, `br|B|`) | Docs A and B unchanged. |
+| Grant Alice read on doc D | 2 KV writes (`a|D|alice`, `g|alice|D`) | Doc D unchanged. |
+| Tag doc D with "urgent" | 1 KV write (`tag|D|urgent`) | Doc D unchanged. |
+| Check-in metadata-only new version | 1 KV write (new `v|`) + 1 KV update (`d|`) + 1 Lucene write | Zero bytes copied (renditions shared via content-address). Refs / folders / ACLs unchanged and unindexed. |
+| Check-in with new primary rendition | 1 KV blob write (new bytes if new hash) + 1 KV `v|` + 1 KV `d|` + 1 Lucene | Other renditions still shared. |
+| Add a computed thumbnail to existing version | 1 KV blob write + 1 KV `v|` in-place update + 1 Lucene reindex | Version identity unchanged; only content_refs manifest grows. |
+
+### The single expensive op — and why it's OK
+
+Attaching a thumbnail to an existing version requires rewriting the
+`v|` entry (to update `content_refs`) and reindexing that version in
+Lucene. This is intentional: the version's content manifest IS its
+identity in the "what renditions do I have" sense, so pipelines that
+add derived renditions need somewhere to record their output. The
+alternative — a separate `rendition|{version_id}|{role}` keyspace —
+was rejected because it adds a KV round-trip on every doc read to
+assemble the manifest, and reads dominate writes.
+
+The tradeoff is explicit: **read performance wins over write
+efficiency for the rendition manifest specifically**, because
+rendition entries are small (dozens of bytes per role) and the
+rewrite cost is bounded. For everything else — refs, ACLs, folders,
+tags — write efficiency wins.
+
+### The `references` field and `acls` field are NOT on the doc
+
+Prior drafts of this design had `references: array<core_reference>`
+and `acls: array<core_acl>` on `core_document`. Removed — those are
+tombstone fields at best. If you need the outbound references from
+a doc: prefix-scan `r|{canonical}|`. If you need the ACLs: prefix-scan
+`a|{canonical}|`. If a query needs to filter docs by ACL, use the
+`acl-idx` join above.
+
+The `core_reference` and `core_acl` types are still useful as the
+shape of records living in the sibling keyspaces + secondary indexes
+— just not as inline arrays on the doc.
 
 ## Write paths
 
@@ -306,6 +508,23 @@ GET /dms/folders/{folder_canonical}/contents
   → scanByPrefix f|{folder}|
 ```
 
+### List folders containing a doc
+```
+GET /dms/documents/{canonical}/folders
+  → scanByPrefix df|{canonical}|
+```
+Local to the doc's owning agent. A doc can be linked into many folders;
+this returns all of them.
+
+### Link / unlink doc to folder
+```
+POST   /dms/folders/{folder_canonical}/contents  { child: <canonical> }
+DELETE /dms/folders/{folder_canonical}/contents/{child_canonical}
+  → 2 KV writes (or deletes): f|folder|child + df|child|folder
+  → 1 folder-membership-idx Lucene write
+  → doc body untouched
+```
+
 ## Versioning DAG
 
 Simple lineage, not full git:
@@ -327,14 +546,28 @@ either).
 
 ## ACL model
 
-Application-evaluated on every read + write. Two-pass:
+Application-evaluated on every read + write. Grants live in the
+`a|{canonical}|{principal_hash}` KV keyspace and the `acl-idx` Lucene
+index — NOT on the document. Evaluation is two-pass:
 
-1. **Explicit** — check `document.acls` for a matching principal + permission
-2. **Inherited** — if no explicit match and `parent_folder` set, load
-   parent's ACLs and recurse
+1. **Explicit** — prefix-scan `a|{canonical}|` looking for a
+   matching principal + permission. A grant with `grant: false` is a
+   deny and stops the walk (deny beats allow).
+2. **Inherited** — if no explicit match: prefix-scan
+   `df|{canonical}|` for the doc's folder memberships; recurse into
+   each folder's `a|`. First matching grant wins.
 
 Cache principal→doc→permission resolutions in a KV entry keyed by
 `ac|{canonical}|{principal_hash}` with a short TTL for hot paths.
+Invalidate on `a|{canonical}|*` writes (bounded fan-out — one
+principal per key).
+
+The `acl-idx` Lucene index expands inheritance at index time so
+`SELECT ... FROM documents-idx JOIN acl-idx ...` doesn't need to walk
+the folder tree — the indexer does that once and materializes the
+effective grants. Cost: on a folder ACL change, all descendant docs
+get their `acl-idx` rows rewritten. Bounded by folder fan-out and
+happens off the write path.
 
 Group/role expansion (which users are in group X?) comes from a
 separate identity system (LDAP, IdP, whatever) — outside this doc.
@@ -583,10 +816,11 @@ Runs across every agent (each scans its own partition). `updateDocument(Term, do
 | Cross-doc transactions | ACID via Postgres | Single-doc atomic; cross-doc eventually consistent + idempotent |
 | Horizontal scale | Vertical (bigger DB) | Add mesh agents |
 | Search | Lucene + explicit indexing hook | Lucene as first-class read path, auto-populated via pipeline |
-| Versioning | canonical/next/branch pointers | Same — lifted directly |
-| Folders | Container/Folder entity hierarchy | First-class documents with `content_type: "folder"` + `f|` membership keys |
-| References | Reference entity | `r|` / `br|` KV keys |
-| ACLs | Permission entity + Hibernate joins | JVS field on document + inheritance walk |
+| Versioning | canonical/next/branch pointers | Semver-inspired labels parsed into 8 queryable fields (major/minor/patch/qualifier/qual_number/build/kind + is_head + is_stable) — every part range-queryable via Lucene |
+| Folders | Container/Folder entity hierarchy; single containment | First-class documents with `content_type: "folder"`; **many-to-many** membership via `f|` + `df|` KV pairs — no forced primary parent |
+| References | Reference entity | `r|` / `br|` KV keys (external to doc — adding a citation doesn't rewrite the doc) |
+| ACLs | Permission entity + Hibernate joins | Per-principal `a|` / `g|` KV keys + separate `acl-idx` Lucene index — grant/revoke never touches the doc body |
+| Update cost | Adding an ACL: rewrite doc row + re-run indexer | Adding an ACL: 2 small KV writes + 1 small Lucene doc — doc body untouched |
 | Content | Content + ContentType entities; new version = full copy | `core_content_ref` manifest, copy-on-write per rendition; metadata-only check-in copies zero bytes even for 500 MB docs; derived renditions (thumbnail, extract) regeneratable from source-of-truth via pipelines |
 | Auditing | Hibernate interceptor / event listener | Mesh pipeline writes to an append-only NDJSON audit sink |
 | Failure recovery | pg_restore | Rebuild Lucene from KV; KV replication via WAL |
@@ -603,12 +837,17 @@ Runs across every agent (each scans its own partition). `updateDocument(Term, do
 ## Roadmap
 
 ### Phase 1 — minimum viable (2-3 weeks)
-- `core_document`, `core_reference`, `core_content_ref` types + JVS schemas
+- `core_document`, `core_reference`, `core_content_ref`, `core_acl` types + JVS schemas
+- Version label parser + assembler (`VersionLabel.parse` / `bump(kind)`)
+  producing the 8 queryable fields
 - New module `hitorro-dms` (Spring-agnostic core) with:
-  - `KvDocumentStore` — single-agent CRUD, versioning, references
-  - `LuceneIndexWriter` — dual-write via mesh pipeline
-  - `DocumentService` — orchestration
+  - `KvDocumentStore` — single-agent CRUD, versioning (with proper label bumps)
+  - `KvReferenceStore` — `r|` / `br|` writes
+  - `LuceneIndexWriter` — writes to `documents-idx` via mesh pipeline
+  - `DocumentService` — orchestration; enforces "no doc rewrite for external mutations"
 - Integration tests hitting real RocksDB + Lucene
+- Assertion tests for the [Minimal-update principle](#minimal-update-principle)
+  cost table — actually count the KV writes per op
 - No REST, no distribution — just the storage semantics
 
 ### Phase 2 — Spring Boot service (2 weeks)
@@ -623,9 +862,13 @@ Runs across every agent (each scans its own partition). `updateDocument(Term, do
 - Multi-agent smoke test in `hitorro-mesh-examples`
 
 ### Phase 4 — ACLs + folders (2-3 weeks)
-- `core_acl` type + inheritance walk
-- Folders as documents with `content_type: "folder"` + folder-membership index
-- Move/copy operations (single-doc atomic; folder-membership update is the follow-up batch)
+- ACL evaluator + inheritance walk (explicit → inherited via `df|` folder walk)
+- `acl-idx` secondary Lucene index with inheritance-expanded rows
+- Folders as documents with `content_type: "folder"`
+- Many-to-many folder memberships (`f|` + `df|`) — a doc linked into N folders
+- `folder-membership-idx` secondary Lucene index
+- Link/unlink operations — 2 KV writes each, doc bodies untouched
+- Move = unlink + link (two writes to remove from old folder, two writes to add to new)
 
 ### Phase 5 — content blobs + renditions (2-3 weeks)
 - Content-addressed blob store (`b|{sha256}` metadata + `blob-body|` for KV-hosted; MinIO/S3 backends)
