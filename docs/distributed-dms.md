@@ -54,7 +54,8 @@ already ship:
 | **Reference** | A directed edge from one document (at a specific version, or at "current") to another, with a type ("supersedes", "cites", "attached-to", …) and optional aux data. |
 | **Folder** | A named container that lists documents by canonical id. Folders can nest. Modelled as first-class documents themselves — a folder IS a document with a specific type. |
 | **ACL** | Access-control entries scoped to a document + a principal (user/group/role) + a permission (read/write/delete/…). Application-evaluated on read/write. |
-| **Content ref** | Pointer to a binary blob (in the KV store for small content, MinIO/S3 for large). One document can have multiple content refs (original, thumbnail, extracted-text, …). |
+| **Rendition** | One view of a document's content — its primary bytes, a thumbnail, an extracted-text version, a transcript, an OCR pass. Each rendition has a `role` name and points at a content blob by sha256. |
+| **Content ref** | One entry in a document's rendition manifest. Points at a binary blob (KV for small, MinIO/S3 for large) via content-address (sha256). Manifest is copy-on-write across versions: shared until a specific rendition is replaced. |
 
 ## Type definitions
 
@@ -132,12 +133,17 @@ Inherits `id`, `times`, `title`, `body`, `description` from
 {
   "name": "content_ref",
   "fields": [
-    {"name": "role",       "type": "core_string", "doc": "'primary' / 'thumbnail' / 'text-extract' / 'preview' / …"},
-    {"name": "mime",       "type": "core_string"},
-    {"name": "size_bytes", "type": "core_long"},
-    {"name": "hash_sha256","type": "core_string"},
-    {"name": "url",        "type": "core_url",    "doc": "'kv://{store}/{key}', 's3://…', 'minio://…', 'file://…'."},
-    {"name": "inline",     "type": "core_string", "doc": "Base64 blob if size < ~4 KB — cheaper than a KV round-trip."}
+    {"name": "role",              "type": "core_string", "doc": "'primary' / 'thumbnail' / 'text-extract' / 'preview' / 'transcript' / 'ocr' / … — canonical name of the rendition."},
+    {"name": "mime",              "type": "core_string"},
+    {"name": "size_bytes",        "type": "core_long"},
+    {"name": "hash_sha256",       "type": "core_string", "doc": "Content address. Same bytes ⇒ same hash ⇒ same blob (dedup + shared across versions)."},
+    {"name": "url",               "type": "core_url",    "doc": "'blob://{sha256}', 'minio://…', 's3://…', 'file://…' — where the bytes actually live."},
+    {"name": "inline",            "type": "core_string", "doc": "Base64 blob if size < ~4 KB — cheaper than a blob-store round-trip."},
+
+    {"name": "generated_by",      "type": "core_string", "doc": "'user' (source of truth) | 'pipeline:{name}' (derived; regeneratable)."},
+    {"name": "derived_from_role", "type": "core_string", "doc": "For derived renditions: the role this was computed from ('thumbnail' derived_from_role='primary')."},
+    {"name": "source_version_id", "type": "core_id",     "doc": "The version_id that FIRST introduced this specific rendition entry. Unchanged across shared-content versions; updated only when the entry is replaced (copy-on-write split)."},
+    {"name": "attached_at",       "type": "core_date",   "doc": "When this rendition entry (this hash, this role) first appeared."}
   ]
 }
 ```
@@ -198,22 +204,35 @@ fields (via `JvsLuceneSink` + a JVS type json):
 ### Check-in (new version of an existing doc)
 
 ```
-client → POST /dms/documents/{canonical}/versions   { body … }
+client → POST /dms/documents/{canonical}/versions
+         (optional multipart: replacement renditions keyed by role)
    │
    ▼
 DMS service
    1. Load current head from KV: get d|{canonical}
    2. Compute next version_label per policy (major/minor/draft)
-   3. Build new version JVS doc
+   3. Build new version JVS doc:
+        - metadata fields from request body
+        - content_refs = SHALLOW COPY of prev head's content_refs
+        - for each replacement rendition in the multipart:
+            * write blob (if not already present by hash) → blob-body|{sha256}
+            * update b|{sha256} metadata
+            * replace matching content_ref entry (or append if new role)
+            * set source_version_id = new version, attached_at = now
+          Roles not in the multipart body stay shared with prev head.
    4. Emit mesh job (or direct write) — one write pipeline:
         node: persist
           source: inline (the one new version)
-          steps:  [set-field is_head=true, set-field is_head=false-for-old-head-in-a-follow-up-batch]
           sinks:
             - kvstore  (writes v|canonical|label + updates d|canonical + writes back-refs)
             - jvs-lucene  (indexes the new version)
-   5. Return { canonical, version_id, version_label }
+   5. Return { canonical, version_id, version_label, renditions: [role, hash, shared_with_prev] }
 ```
+
+Key property: **a metadata-only check-in copies zero bytes.** Even
+for a doc with a 500 MB primary rendition, the check-in stays cheap
+because the `content_refs` entry pointing at that blob is duplicated
+by reference, not by value.
 
 Consistency: the **KV write and the Lucene write happen inside the same
 mesh pipeline node**. Failure of the Lucene sink surfaces as a job
@@ -356,20 +375,184 @@ Small tables broadcast to every agent for zero-hop reads:
 
 The tradeoff vs basedms: no "move doc + update parent folder + record audit event" as one transaction. You get single-doc atomicity and eventual consistency for cross-doc; if that's not enough for a specific op, that op has to be idempotent with a compensating undo.
 
-## Content blobs
+## Multi-rendition content model
 
-Small content (≤ 4 KB) inlines directly in the JVS doc via
-`core_content_ref.inline`. Above that, the blob lives elsewhere and
-the ref points to it:
+A document can carry **multiple renditions of its content simultaneously**
+— the primary bytes plus derived views: a thumbnail, an extracted-text
+version for search, an OCR pass, an audio transcript, a converted PDF,
+a translation. Each rendition lives as one entry in
+`document.content_refs[]`, discriminated by `role`.
 
-- `kv://dms-blobs/{sha256}` — dedup by content hash; same file uploaded twice = one KV entry, two refs
-- `minio://bucket/{sha256}` — for anything > ~1 MB
-- `s3://bucket/{sha256}` — same for cloud
+### Storage: content-addressed blobs
 
-Content is immutable once stored — a new version pointing at new bytes
-gets a new `content_refs` entry, not an in-place update. This makes
-GC easy (unref-and-sweep) and rebuild trivial (blob store is
-authoritative for bytes; KV+Lucene point at it).
+Bytes are stored **once per unique sha256**, regardless of how many
+documents or versions reference them. Blob layer:
+
+| Key pattern | Value | Purpose |
+|---|---|---|
+| `b\|{sha256}` | `{size, mime, first_seen_at}` | Blob metadata (small; refcounting isn't stored here — see GC below) |
+| `blob-body\|{sha256}` | raw bytes | For blobs kept in the KV store (small-to-medium; ~≤ 1 MB) |
+| `minio://bucket/{sha256}` / `s3://…` | raw bytes | Larger blobs; URL is the pointer |
+
+A `content_ref.url` of the form `blob://{sha256}` is resolved at read
+time by looking at `b|{sha256}` to see where the bytes actually live —
+so the DMS can migrate a blob from KV to MinIO without rewriting
+every referring document.
+
+### Copy-on-write across versions
+
+The rule: **check-in copies the manifest, not the bytes.** A new
+version starts with a shallow copy of the previous version's
+`content_refs[]` array — every entry still points at the same
+`hash_sha256`, so every rendition is transparently shared until
+somebody actually replaces one.
+
+```
+v1.content_refs = [
+    {role: primary,   hash: sha_A, source_version_id: v1},
+    {role: thumbnail, hash: sha_T, source_version_id: v1, generated_by: 'pipeline:thumbnail-worker', derived_from_role: 'primary'},
+    {role: extract,   hash: sha_X, source_version_id: v1, generated_by: 'pipeline:tika-extract',     derived_from_role: 'primary'}
+]
+
+# User checks in a metadata-only change (fixes a typo in the title).
+v2.content_refs = [
+    {role: primary,   hash: sha_A, source_version_id: v1},   ← unchanged; still points at v1's bytes
+    {role: thumbnail, hash: sha_T, source_version_id: v1},   ← unchanged
+    {role: extract,   hash: sha_X, source_version_id: v1}    ← unchanged
+]
+# No bytes copied. Both versions share every rendition.
+```
+
+Now the user PUTs a replacement `primary` rendition on v2:
+
+```
+PUT /dms/documents/{canonical}/versions/v2/renditions/primary
+  Content-Type: image/jpeg
+  <new bytes B>
+
+v2.content_refs = [
+    {role: primary,   hash: sha_B, source_version_id: v2, attached_at: now},   ← SPLIT — new blob, new source_version
+    {role: thumbnail, hash: sha_T, source_version_id: v1},                     ← still shared
+    {role: extract,   hash: sha_X, source_version_id: v1}                      ← still shared
+]
+```
+
+Only the `primary` rendition split. `thumbnail` and `extract` still
+share bytes with v1. When the thumbnail-worker pipeline notices the
+primary changed on v2, it'll compute a new thumbnail and PUT that
+rendition too — at which point the thumbnail rendition splits
+independently.
+
+### The invariant
+
+**Two versions share a rendition IFF they have the same
+`hash_sha256` for that role.** No bookkeeping beyond the hash is
+needed to answer "which versions share this blob?" — walk the KV
+prefix `v|{canonical}|`, look at each version's `content_refs`, group
+by `(role, hash)`.
+
+### Derived renditions
+
+Renditions with `generated_by: 'pipeline:{name}'` are **regeneratable**
+— if the blob is lost, gone, or you want a better one (e.g. bump the
+thumbnail resolution), a mesh pipeline can rebuild them from the
+source-of-truth rendition (`generated_by: 'user'`). The
+`derived_from_role` field tells the pipeline where to look.
+
+```yaml
+# pipelines/regenerate-thumbnails.yaml — nightly job
+job: regenerate-thumbnails
+nodes:
+  - id: find-stale
+    pipeline:
+      source: {kind: lucene, name: documents-idx, query: "content_type:image AND -content_refs.role:thumbnail"}
+      sinks: []
+  - id: build
+    depends: [find-stale]
+    pipeline:
+      source: {kind: ref, node: find-stale}
+      steps:
+        - kind: groovy-map
+          script: |
+            def primary = row.content_refs.find { it.role == 'primary' }
+            row.content_refs.removeAll { it.role == 'thumbnail' }
+            row.content_refs.add(thumbnailer.buildFrom(primary))
+            row
+      sinks:
+        - {kind: kvstore, name: dms-versions, keyExpr: "id"}
+        - {kind: jvs-lucene, name: documents-idx, ...}
+```
+
+### Rendition write operations
+
+| Op | HTTP | Semantics |
+|---|---|---|
+| Add / replace one rendition on the head version, in-place (no new version) | `PUT /dms/documents/{c}/renditions/{role}` | Mutates the current head's manifest. Other renditions unaffected. |
+| Add / replace one rendition on a specific version | `PUT /dms/documents/{c}/versions/{v}/renditions/{role}` | Same, but pinned to a version (must not be tombstoned; must not be a snapshot of a shared upstream — replacing on a mid-tree version is a "branch this version's content_refs" operation) |
+| Check-in a new version with content changes | `POST /dms/documents/{c}/versions` with multipart body carrying replacement renditions | Creates the new version, starts from prev's `content_refs`, applies replacements on the way in. Roles not in the body remain shared. |
+| Delete a rendition | `DELETE /dms/documents/{c}/versions/{v}/renditions/{role}` | Removes the entry. Blob is unref'd (see GC). |
+| Fetch a rendition | `GET /dms/documents/{c}[/versions/{v}]/renditions/{role}` | Returns bytes + mime. If `?redirect=true`, 302 to the underlying `s3://…` / `minio://…` URL. |
+| List renditions | `GET /dms/documents/{c}[/versions/{v}]/renditions` | Manifest view — role, mime, size, hash. |
+
+The default check-in (no content body) is a **manifest-only new
+version** — zero bytes copied, all renditions shared. This is the
+common case for a metadata edit (rename, categorize, ACL tweak).
+
+### Garbage collection
+
+Refcounts under a distributed write model are painful (races,
+consistency headaches on cross-partition writes). Instead: **mark-
+and-sweep**.
+
+```yaml
+# pipelines/blob-gc.yaml — weekly job
+job: blob-gc
+nodes:
+
+  - id: live-hashes
+    pipeline:
+      source: {kind: kvstore, name: dms-versions, prefix: "v|"}
+      steps:
+        - kind: groovy-map
+          script: |
+            // Emit one row per (canonical, hash) so downstream reduces
+            // can dedup at the hash level.
+            row.content_refs.collect { [hash: it.hash_sha256] }
+      reduce:
+        group-by: [hash]
+        aggs: [{name: n, kind: COUNT}]
+      sinks:
+        - {kind: memory-table, name: live-hashes}
+
+  - id: sweep
+    depends: [live-hashes]
+    pipeline:
+      source: {kind: kvstore, name: dms-blobs, prefix: "b|"}
+      steps:
+        - kind: lookup
+          from: live-hashes
+          onField: hash
+          withKey: hash
+          adds: [n]
+        - kind: filter
+          expr: "n == null"          # blob not referenced by any live version
+      sinks:
+        - {kind: kvstore, name: dms-blobs, keyExpr: "hash", mode: delete}
+        - {kind: counting, label: swept}
+```
+
+Runs cheaply (weekly, or on-demand). Blobs live in the store for a
+grace period after their last reference disappears — so a
+"restore-from-trash" op inside the grace window is free.
+
+### Small-blob inlining
+
+For renditions under ~4 KB (thumbnails' base64 for previews, tiny
+text extracts), `content_ref.inline` holds the base64 bytes directly
+on the document. Removes a blob-store round-trip on read. Sharing
+still works because inlined blobs are just data on the manifest —
+duplicating an inline entry to a new version is a byte-array copy
+inside the JVS doc, essentially free.
 
 ## Rebuild-from-KV
 
@@ -404,7 +587,7 @@ Runs across every agent (each scans its own partition). `updateDocument(Term, do
 | Folders | Container/Folder entity hierarchy | First-class documents with `content_type: "folder"` + `f|` membership keys |
 | References | Reference entity | `r|` / `br|` KV keys |
 | ACLs | Permission entity + Hibernate joins | JVS field on document + inheritance walk |
-| Content | Content + ContentType entities | `core_content_ref` array pointing at KV or blob store |
+| Content | Content + ContentType entities; new version = full copy | `core_content_ref` manifest, copy-on-write per rendition; metadata-only check-in copies zero bytes even for 500 MB docs; derived renditions (thumbnail, extract) regeneratable from source-of-truth via pipelines |
 | Auditing | Hibernate interceptor / event listener | Mesh pipeline writes to an append-only NDJSON audit sink |
 | Failure recovery | pg_restore | Rebuild Lucene from KV; KV replication via WAL |
 
@@ -444,10 +627,15 @@ Runs across every agent (each scans its own partition). `updateDocument(Term, do
 - Folders as documents with `content_type: "folder"` + folder-membership index
 - Move/copy operations (single-doc atomic; folder-membership update is the follow-up batch)
 
-### Phase 5 — content blobs (1-2 weeks)
-- `core_content_ref` fully supported: KV, MinIO, S3, inline
-- Content-dedup by sha256
-- GC pipeline (unref-and-sweep)
+### Phase 5 — content blobs + renditions (2-3 weeks)
+- Content-addressed blob store (`b|{sha256}` metadata + `blob-body|` for KV-hosted; MinIO/S3 backends)
+- `core_content_ref` fully supported: url resolution, inline for small blobs
+- Multi-rendition manifest per document (primary + thumbnail + extract + …)
+- Copy-on-write: manifest is shallow-copied on check-in; individual renditions split only when replaced
+- REST ops for rendition PUT/DELETE/GET/list — both on head and on specific version
+- Derived-rendition regeneration pipelines (example: nightly thumbnail rebuild triggered by missing role)
+- Mark-and-sweep blob GC pipeline
+- End-to-end test: 500 MB primary + thumbnail + extract; check-in with metadata-only change; assert zero bytes copied
 
 ### Phase 6 — audit + notifications (1 week)
 - Append-only audit sink (NDJSON)
