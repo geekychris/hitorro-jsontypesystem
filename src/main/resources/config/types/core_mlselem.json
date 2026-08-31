@@ -1,0 +1,262 @@
+{
+  "name": "mlselem",
+  "indexseeker": {
+    "class": "iso-language-seeker"
+  },
+  "fetchlang": true,
+  "fields": [
+    {
+      "name": "lang",
+      "type": "core_string"
+    },
+    {
+      "name": "text",
+      "type": "core_string",
+      "i18n": true
+    },
+    {
+      "name": "clean",
+      "type": "core_string",
+      "i18n": true,
+      "dynamic": {
+        "class": "dynamic-mapper",
+        "mapper": {
+          "class": "html-scrubber"
+        },
+        "fields": [
+          ".text"
+        ]
+      },
+      "groups": [
+        {
+          "name": "index",
+          "method": "text",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "dependency",
+      "type": "core_string",
+      "i18n": true,
+      "dynamic_": {
+        "class": "dynamic-mapper",
+        "mapper": {
+          "class": "mst-mapper"
+        },
+        "fields": [
+          ".text"
+        ]
+      },
+      "groups": [
+      ]
+    },
+
+
+    {
+      "name": "clean_normhash",
+      "type": "core_string",
+      "vector": true,
+      "dynamic": {
+        "class": "dynamic-mapper",
+        "mapper": {
+          "class": "normalized-text-hash"
+        },
+        "fields": [
+          ".clean"
+        ]
+      },
+      "groups": [
+        {
+          "name": "index",
+          "method": "long",
+          "tags": ["basic"]
+        },
+        {
+          "name": "enrich",
+          "method": "text",
+          "tags": ["hash"]
+        }
+      ]
+    },
+    {
+      "name": "pos",
+      "type": "core_string",
+      "vector": true,
+      "i18n": true,
+      "dynamic": {
+        "class": "pos-tokenizer",
+        "fields": [
+          ".lang",
+          ".clean"
+        ],
+        "mapper": {
+          "class": ""
+        }
+      },
+      "groups": [
+        {
+          "name": "enrich",
+          "method": "text",
+          "tags": ["pos"]
+        }
+
+      ]
+    },
+    {
+      "name": "segmented_span",
+      "type": "core_string",
+      "vector": true,
+      "i18n": true,
+      "dynamic": {
+        "class": "sentence-segmenter-span",
+        "fields": [
+          ".lang",
+          ".clean"
+        ],
+        "mapper": {
+          "class": ""
+        }
+      },
+      "groups": [
+        {
+          "name": "index",
+          "method": "text",
+          "tags": ["basic"]
+        },
+        {
+          "name": "enrich",
+          "method": "text",
+          "tags": ["segmented"]
+        }
+
+      ]
+    },
+    {
+      "name": "segmented",
+      "type": "core_string",
+      "vector": true,
+      "i18n": true,
+      "dynamic": {
+        "class": "sentence-segmenter",
+        "fields": [
+          ".segmented_span",
+          ".clean"
+        ],
+        "mapper": {
+          "class": ""
+        }
+      },
+      "groups": [
+        {
+          "name": "index",
+          "method": "text",
+          "tags": ["basic"]
+        },
+        {
+          "name": "enrich",
+          "method": "text",
+          "tags": ["segmented"]
+        }
+
+      ]
+    },
+    {
+      "name": "segmented_parsed",
+      "type": "core_string",
+      "vector": true,
+      "i18n": true,
+      "dynamic": {
+        "class": "chunk-mapper",
+        "fields": [
+          ".lang",
+          ".segmented"
+        ]
+      },
+      "groups": [
+
+        {
+          "name": "enrich",
+          "method": "text",
+          "tags": ["parsed"]
+        }
+      ]
+    },
+    {
+      "name": "segmented_answers",
+      "type": "core_string",
+      "vector": true,
+      "i18n": true,
+      "dynamic": {
+        "class": "text-classifier",
+        "fields": [
+          ".lang",
+          ".segmented"
+        ]
+      },
+      "groups": [
+        {
+          "name": "enrich",
+          "method": "text"
+        },
+        {
+          "name": "enrich",
+          "method": "text",
+          "tags": ["answers"]
+        }
+      ]
+    },
+    {
+      "name": "segmented_ner",
+      "type": "core_string",
+      "vector": true,
+      "i18n": true,
+      "dynamic": {
+        "class": "ner-markup",
+        "fields": [
+          ".lang",
+          ".segmented"
+        ]
+      },
+      "groups": [
+        {
+          "name": "index",
+          "method": "textmarkup",
+          "tags": ["advanced"]
+        },
+        {
+          "name": "enrich",
+          "method": "text",
+          "tags": ["ner"]
+        }
+      ]
+    },
+    {
+      "name": "segmented_normhash",
+      "type": "core_string",
+      "vector": true,
+      "dynamic": {
+        "class": "dynamic-mapper",
+        "mapper": {
+          "class": "normalized-text-hash"
+        },
+        "fields": [
+          ".segmented"
+        ]
+      },
+      "groups": [
+        {
+          "name": "index",
+          "method": "long",
+          "tags": ["basic"]
+        },
+        {
+          "name": "enrich",
+          "method": "text",
+          "tags": ["hash"]
+        }
+
+      ]
+    }
+  ]
+}
