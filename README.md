@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Hitorro Jsontypesystem logo" width="180">
+</p>
+
 # hitorro-jsontypesystem
 
 A metadata-driven JSON type system that gives structure, multi-lingual text, NLP enrichment, and projection-based transformations to JSON documents. Types are defined as JSON configuration — not Java classes — making the system fully extensible at runtime without recompilation.
