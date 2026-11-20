@@ -21,12 +21,13 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * JSON-Schema-style constraint checkers, read directly from a field definition JsonNode.
@@ -73,22 +74,22 @@ public final class FieldConstraints {
 
     private static void checkString(String path, JsonNode value, JsonNode fieldDef,
                                     java.util.List<JVSValidator.Violation> out) {
-        if (!value.isTextual()) return;
-        String s = value.textValue();
+        if (!value.isString()) return;
+        String s = JsonValues.textValue(value);
         if (fieldDef.hasNonNull("minLength")) {
-            int min = fieldDef.get("minLength").asInt();
+            int min = JsonValues.asInt(fieldDef.get("minLength"));
             if (s.length() < min) {
                 out.add(err(path, "value length " + s.length() + " is below minLength " + min));
             }
         }
         if (fieldDef.hasNonNull("maxLength")) {
-            int max = fieldDef.get("maxLength").asInt();
+            int max = JsonValues.asInt(fieldDef.get("maxLength"));
             if (s.length() > max) {
                 out.add(err(path, "value length " + s.length() + " exceeds maxLength " + max));
             }
         }
         if (fieldDef.hasNonNull("pattern")) {
-            String regex = fieldDef.get("pattern").asText();
+            String regex = JsonValues.asText(fieldDef.get("pattern"));
             try {
                 if (!Pattern.matches(regex, s)) {
                     out.add(err(path, "value does not match pattern /" + regex + "/"));
@@ -102,15 +103,15 @@ public final class FieldConstraints {
     private static void checkNumber(String path, JsonNode value, JsonNode fieldDef,
                                     java.util.List<JVSValidator.Violation> out) {
         if (!value.isNumber()) return;
-        double n = value.doubleValue();
+        double n = JsonValues.doubleValue(value);
         if (fieldDef.hasNonNull("minimum")) {
-            double min = fieldDef.get("minimum").doubleValue();
+            double min = JsonValues.doubleValue(fieldDef.get("minimum"));
             if (n < min) {
                 out.add(err(path, "value " + n + " is below minimum " + min));
             }
         }
         if (fieldDef.hasNonNull("maximum")) {
-            double max = fieldDef.get("maximum").doubleValue();
+            double max = JsonValues.doubleValue(fieldDef.get("maximum"));
             if (n > max) {
                 out.add(err(path, "value " + n + " exceeds maximum " + max));
             }
@@ -129,11 +130,11 @@ public final class FieldConstraints {
 
     private static void checkFormat(String path, JsonNode value, JsonNode fieldDef,
                                     java.util.List<JVSValidator.Violation> out) {
-        if (!value.isTextual()) return;
+        if (!value.isString()) return;
         JsonNode fmtNode = fieldDef.get("format");
-        if (fmtNode == null || !fmtNode.isTextual()) return;
-        String s = value.textValue();
-        String fmt = fmtNode.asText();
+        if (fmtNode == null || !fmtNode.isString()) return;
+        String s = JsonValues.textValue(value);
+        String fmt = JsonValues.asText(fmtNode);
         switch (fmt) {
             case "email" -> {
                 if (!EMAIL_RE.matcher(s).matches()) {

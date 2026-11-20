@@ -21,8 +21,8 @@
  */
 package com.hitorro.jsontypesystem.predicates;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
 import com.hitorro.util.core.opers.AlwaysTrueOperator;
 import com.hitorro.util.core.opers.HTPredicate;
 import com.hitorro.util.json.keys.BaseMappingProperty;

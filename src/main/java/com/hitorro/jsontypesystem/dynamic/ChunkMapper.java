@@ -21,10 +21,10 @@
  */
 package com.hitorro.jsontypesystem.dynamic;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.basetext.maxentclassifier.ChunkParser;
 import com.hitorro.basetext.maxentclassifier.OpenNLPClosures;
 import com.hitorro.jsontypesystem.JVS;
@@ -36,6 +36,7 @@ import opennlp.tools.cmdline.parser.ParserTool;
 import opennlp.tools.parser.Parse;
 
 import java.util.function.Function;
+import com.hitorro.util.json.JsonValues;
 
 public class ChunkMapper extends com.hitorro.jsontypesystem.dynamic.DynamicFieldMapper {
     private static ChunkRowMapper mapper = new ChunkRowMapper();
@@ -44,7 +45,7 @@ public class ChunkMapper extends com.hitorro.jsontypesystem.dynamic.DynamicField
     public JsonNode map(final JVS jvs, final Propaccess pa, final int depth) {
         JsonNode arr[] = getValues(jvs, pa, depth);
         if (arr.length > 1) {
-            String langText = arr[0].textValue();
+            String langText = JsonValues.textValue(arr[0]);
             IsoLanguage lang = Iso639Table.getInstance().getRow(langText);
             JsonNode valIn = arr[1];
             return mapper.apply(valIn, lang);
@@ -73,7 +74,7 @@ class ChunkRowMapper extends BaseMapper<JsonNode, ArrayNode> {
         Function<ChunkParser, ArrayNode> function = (parser) -> {
             ArrayNode ret = JsonNodeFactory.instance.arrayNode();
             for (JsonNode elem : arrayNode) {
-                Parse parse = ParserTool.parseLine(elem.textValue(), parser, 1)[0];
+                Parse parse = ParserTool.parseLine(JsonValues.textValue(elem), parser, 1)[0];
                 ret.add(getParse(parse));
             }
             return ret;
@@ -91,7 +92,7 @@ class ChunkRowMapper extends BaseMapper<JsonNode, ArrayNode> {
         node.put("se", p.getSpan().getEnd());
         ArrayNode c = JsonNodeFactory.instance.arrayNode();
         node.set("c", c);
-        node.set("t", JsonNodeFactory.instance.textNode(p.getText().substring(p.getSpan().getStart(), p.getSpan().getEnd())));
+        node.set("t", JsonNodeFactory.instance.stringNode(p.getText().substring(p.getSpan().getStart(), p.getSpan().getEnd())));
         for (Parse pChild : children) {
             c.add(getParse(pChild));
         }

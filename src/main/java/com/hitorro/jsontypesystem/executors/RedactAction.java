@@ -21,8 +21,8 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.Group;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
@@ -81,10 +81,10 @@ public class RedactAction implements ExecutorAction<ExecutionBuilder> {
                 return; // nothing to redact — matches RemoveAction's leave-empty behaviour
             }
             JsonNode replacement = switch (mode) {
-                case "hash" -> JsonNodeFactory.instance.textNode(sha256Hex(val.toString()));
-                case "hmac" -> JsonNodeFactory.instance.textNode(hmacSha256Hex(val.toString(), pc.redactionKey));
+                case "hash" -> JsonNodeFactory.instance.stringNode(sha256Hex(val.toString()));
+                case "hmac" -> JsonNodeFactory.instance.stringNode(hmacSha256Hex(val.toString(), pc.redactionKey));
                 case "null" -> JsonNodeFactory.instance.nullNode();
-                default     -> JsonNodeFactory.instance.textNode("***");
+                default     -> JsonNodeFactory.instance.stringNode("***");
             };
             pc.source.set(path, replacement);
         } catch (PropaccessError e) {

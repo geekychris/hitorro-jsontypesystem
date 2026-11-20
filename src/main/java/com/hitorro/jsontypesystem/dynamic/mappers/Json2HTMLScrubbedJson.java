@@ -21,11 +21,12 @@
  */
 package com.hitorro.jsontypesystem.dynamic.mappers;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.language.Iso639Table;
 import com.hitorro.language.IsoLanguage;
 import com.hitorro.util.core.iterator.mappers.JsonInitableMapper;
+import com.hitorro.util.json.JsonValues;
 
 public class Json2HTMLScrubbedJson extends JsonInitableMapper<JsonNode, JsonNode> {
     public static Json2HTMLScrubbedJson stripper = new Json2HTMLScrubbedJson();
@@ -40,11 +41,11 @@ public class Json2HTMLScrubbedJson extends JsonInitableMapper<JsonNode, JsonNode
         if (js == null || js.isNull()) {
             return js;
         }
-        String t = js.asText();
+        String t = JsonValues.asText(js);
         if (t == null) {
             return null;
         }
-        return JsonNodeFactory.instance.textNode(getParser().apply(t));
+        return JsonNodeFactory.instance.stringNode(getParser().apply(t));
     }
 
     private com.hitorro.jsontypesystem.dynamic.mappers.HTMLParserMapper getParser() {

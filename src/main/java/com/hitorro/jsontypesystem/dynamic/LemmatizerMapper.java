@@ -21,9 +21,9 @@
  */
 package com.hitorro.jsontypesystem.dynamic;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.language.Iso639Table;
 import com.hitorro.language.IsoLanguage;
@@ -31,6 +31,7 @@ import com.hitorro.language.LemmatizerModelSingleton;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import opennlp.tools.lemmatizer.LemmatizerME;
 import opennlp.tools.lemmatizer.LemmatizerModel;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Dynamic field mapper that produces an array of lemma strings from token + POS-tag pairs.
@@ -75,7 +76,7 @@ public class LemmatizerMapper extends DynamicFieldMapper {
         JsonNode tokensNode = arr[1];
         JsonNode tagsNode = arr[2];
 
-        if (langNode == null || !langNode.isTextual()) return null;
+        if (langNode == null || !langNode.isString()) return null;
         if (tokensNode == null || !tokensNode.isArray()) return null;
         if (tagsNode == null || !tagsNode.isArray()) return null;
 
@@ -83,7 +84,7 @@ public class LemmatizerMapper extends DynamicFieldMapper {
         if (tagsNode.size() != n) return null; // mismatched arrays — refuse rather than mislemmatise
         if (n == 0) return JsonNodeFactory.instance.arrayNode();
 
-        IsoLanguage lang = Iso639Table.getInstance().getRow(langNode.textValue());
+        IsoLanguage lang = Iso639Table.getInstance().getRow(JsonValues.textValue(langNode));
         if (lang == null) return null;
 
         LemmatizerModel model = LemmatizerModelSingleton.singleton.get(lang);
@@ -93,8 +94,8 @@ public class LemmatizerMapper extends DynamicFieldMapper {
         String[] tokens = new String[n];
         String[] tags = new String[n];
         for (int i = 0; i < n; i++) {
-            tokens[i] = tokensNode.get(i).textValue();
-            tags[i] = tagsNode.get(i).textValue();
+            tokens[i] = JsonValues.textValue(tokensNode.get(i));
+            tags[i] = JsonValues.textValue(tagsNode.get(i));
         }
         String[] lemmas = lemmatizer.lemmatize(tokens, tags);
 

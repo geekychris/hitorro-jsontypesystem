@@ -21,11 +21,12 @@
  */
 package com.hitorro.jsontypesystem.datamapper;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.jsontypesystem.Type;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Generates JVS documents from Type definitions using DataGenerators.
@@ -50,7 +51,7 @@ public class TypeAwareGenerator {
 		var doc = new JVS();
 
 		// Set type name
-		String typeName = typeDef.has("name") ? typeDef.get("name").asText() : "generated";
+		String typeName = typeDef.has("name") ? JsonValues.asText(typeDef.get("name")) : "generated";
 		doc.set("type", typeName);
 
 		if (!typeDef.has("fields")) return doc;
@@ -61,15 +62,15 @@ public class TypeAwareGenerator {
 		ObjectNode root = (ObjectNode) doc.getJsonNode();
 
 		for (JsonNode fieldDef : fieldsNode) {
-			String fieldName = fieldDef.has("name") ? fieldDef.get("name").asText() : null;
+			String fieldName = fieldDef.has("name") ? JsonValues.asText(fieldDef.get("name")) : null;
 			if (fieldName == null) continue;
 
 			// Skip dynamic fields — they're computed at enrichment time
 			boolean isDynamic = fieldDef.has("dynamic") && !fieldDef.get("dynamic").isNull();
 			if (isDynamic) continue;
 
-			String fieldTypeName = fieldDef.has("type") ? fieldDef.get("type").asText() : null;
-			boolean isVector = fieldDef.has("vector") && fieldDef.get("vector").asBoolean();
+			String fieldTypeName = fieldDef.has("type") ? JsonValues.asText(fieldDef.get("type")) : null;
+			boolean isVector = fieldDef.has("vector") && JsonValues.asBoolean(fieldDef.get("vector"));
 
 			if (isVector) {
 				var arr = JsonNodeFactory.instance.arrayNode();
@@ -91,38 +92,38 @@ public class TypeAwareGenerator {
 	}
 
 	private static JsonNode generateFieldValue(String typeName, DataGenerators gen) {
-		if (typeName == null) return JsonNodeFactory.instance.textNode(gen.lorem());
+		if (typeName == null) return JsonNodeFactory.instance.stringNode(gen.lorem());
 
 		String normalized = typeName.startsWith("core_") ? typeName.substring(5) : typeName;
 
 		return switch (normalized) {
-			case "string" -> JsonNodeFactory.instance.textNode(gen.firstName() + " " + gen.lastName());
+			case "string" -> JsonNodeFactory.instance.stringNode(gen.firstName() + " " + gen.lastName());
 			case "long" -> JsonNodeFactory.instance.numberNode(gen.longBetween(1, 100000));
 			case "int" -> JsonNodeFactory.instance.numberNode(gen.intBetween(1, 10000));
 			case "boolean" -> JsonNodeFactory.instance.booleanNode(gen.bool());
-			case "date" -> JsonNodeFactory.instance.textNode(gen.date());
+			case "date" -> JsonNodeFactory.instance.stringNode(gen.date());
 			case "double", "float" -> JsonNodeFactory.instance.numberNode(gen.doubleBetween(0, 1000));
 			case "mls" -> generateMls(gen);
 			case "dates" -> generateDates(gen);
 			case "id" -> generateId(gen);
-			case "url" -> JsonNodeFactory.instance.textNode("https://example.com/" + gen.uuid());
+			case "url" -> JsonNodeFactory.instance.stringNode("https://example.com/" + gen.uuid());
 			default -> generateCompositeStub(normalized, gen);
 		};
 	}
 
 	private static JsonNode generatePrimitiveValue(String typeName, DataGenerators gen) {
-		if (typeName == null) return JsonNodeFactory.instance.textNode(gen.product());
+		if (typeName == null) return JsonNodeFactory.instance.stringNode(gen.product());
 
 		String normalized = typeName.startsWith("core_") ? typeName.substring(5) : typeName;
 
 		return switch (normalized) {
-			case "string" -> JsonNodeFactory.instance.textNode(gen.product());
+			case "string" -> JsonNodeFactory.instance.stringNode(gen.product());
 			case "long" -> JsonNodeFactory.instance.numberNode(gen.longBetween(1, 100000));
 			case "int" -> JsonNodeFactory.instance.numberNode(gen.intBetween(1, 10000));
 			case "boolean" -> JsonNodeFactory.instance.booleanNode(gen.bool());
-			case "date" -> JsonNodeFactory.instance.textNode(gen.date());
+			case "date" -> JsonNodeFactory.instance.stringNode(gen.date());
 			case "double", "float" -> JsonNodeFactory.instance.numberNode(gen.doubleBetween(0, 1000));
-			default -> JsonNodeFactory.instance.textNode(gen.lorem());
+			default -> JsonNodeFactory.instance.stringNode(gen.lorem());
 		};
 	}
 

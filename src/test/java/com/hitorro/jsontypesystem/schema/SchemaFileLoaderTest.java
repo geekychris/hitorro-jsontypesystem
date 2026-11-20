@@ -21,8 +21,8 @@
  */
 package com.hitorro.jsontypesystem.schema;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -64,8 +64,8 @@ class SchemaFileLoaderTest {
 
 			ObjectNode typeJson = loader.loadOne(f);
 
-			assertThat(typeJson.get("name").asText()).isEqualTo("string");
-			assertThat(typeJson.get("primitivetype").asText()).isEqualTo("string");
+			assertThat(typeJson.get("name").asString()).isEqualTo("string");
+			assertThat(typeJson.get("primitivetype").asString()).isEqualTo("string");
 			assertThat(typeJson.has("fields")).isFalse();
 		}
 
@@ -77,26 +77,26 @@ class SchemaFileLoaderTest {
 
 			ObjectNode typeJson = loader.loadOne(f);
 
-			assertThat(typeJson.get("name").asText()).isEqualTo("id");
+			assertThat(typeJson.get("name").asString()).isEqualTo("id");
 			assertThat(typeJson.has("fields")).isTrue();
 
 			JsonNode fields = typeJson.get("fields");
 			assertThat(fields.size()).isEqualTo(4); // domain, did, id, id_hash
 
 			// Verify field types resolve from file-based $ref
-			assertThat(fields.get(0).get("name").asText()).isEqualTo("domain");
-			assertThat(fields.get(0).get("type").asText()).isEqualTo("core_string");
+			assertThat(fields.get(0).get("name").asString()).isEqualTo("domain");
+			assertThat(fields.get(0).get("type").asString()).isEqualTo("core_string");
 
 			// Verify vector field
 			JsonNode idHash = fields.get(3);
-			assertThat(idHash.get("name").asText()).isEqualTo("id_hash");
+			assertThat(idHash.get("name").asString()).isEqualTo("id_hash");
 			assertThat(idHash.get("vector").asBoolean()).isTrue();
-			assertThat(idHash.get("type").asText()).isEqualTo("core_long");
+			assertThat(idHash.get("type").asString()).isEqualTo("core_long");
 
 			// Verify dynamic config preserved
 			JsonNode idField = fields.get(2);
 			assertThat(idField.has("dynamic")).isTrue();
-			assertThat(idField.get("dynamic").get("class").asText())
+			assertThat(idField.get("dynamic").get("class").asString())
 					.isEqualTo("multivalue-merger");
 		}
 
@@ -108,9 +108,9 @@ class SchemaFileLoaderTest {
 			ObjectNode typeJson = loader.loadOne(f);
 
 			// Root-level metadata
-			assertThat(typeJson.get("name").asText()).isEqualTo("mlselem");
+			assertThat(typeJson.get("name").asString()).isEqualTo("mlselem");
 			assertThat(typeJson.has("indexseeker")).isTrue();
-			assertThat(typeJson.get("indexseeker").get("class").asText())
+			assertThat(typeJson.get("indexseeker").get("class").asString())
 					.isEqualTo("iso-language-seeker");
 			assertThat(typeJson.get("fetchlang").asBoolean()).isTrue();
 
@@ -128,37 +128,37 @@ class SchemaFileLoaderTest {
 			// clean: i18n + dynamic (Html scrubber, reads .text) + index group
 			JsonNode cleanField = fieldByName(fields, "clean");
 			assertThat(cleanField.get("i18n").asBoolean()).isTrue();
-			assertThat(cleanField.get("dynamic").get("class").asText())
+			assertThat(cleanField.get("dynamic").get("class").asString())
 					.isEqualTo("dynamic-mapper");
-			assertThat(cleanField.get("dynamic").get("mapper").get("class").asText())
+			assertThat(cleanField.get("dynamic").get("mapper").get("class").asString())
 					.isEqualTo("html-scrubber");
-			assertThat(cleanField.get("dynamic").get("fields").get(0).asText())
+			assertThat(cleanField.get("dynamic").get("fields").get(0).asString())
 					.isEqualTo(".text");
-			assertThat(cleanField.get("groups").get(0).get("name").asText())
+			assertThat(cleanField.get("groups").get(0).get("name").asString())
 					.isEqualTo("index");
 
 			// segmented_ner: vector + i18n + NERMarkupMapper dynamic + two groups
 			JsonNode nerField = fieldByName(fields, "segmented_ner");
 			assertThat(nerField.get("vector").asBoolean()).isTrue();
 			assertThat(nerField.get("i18n").asBoolean()).isTrue();
-			assertThat(nerField.get("dynamic").get("class").asText())
+			assertThat(nerField.get("dynamic").get("class").asString())
 					.isEqualTo("ner-markup");
-			assertThat(nerField.get("dynamic").get("fields").get(0).asText())
+			assertThat(nerField.get("dynamic").get("fields").get(0).asString())
 					.isEqualTo(".lang");
-			assertThat(nerField.get("dynamic").get("fields").get(1).asText())
+			assertThat(nerField.get("dynamic").get("fields").get(1).asString())
 					.isEqualTo(".segmented");
 			// Two groups: index(textmarkup) + enrich(ner)
 			assertThat(nerField.get("groups").size()).isEqualTo(2);
-			assertThat(nerField.get("groups").get(0).get("method").asText())
+			assertThat(nerField.get("groups").get(0).get("method").asString())
 					.isEqualTo("textmarkup");
-			assertThat(nerField.get("groups").get(1).get("tags").get(0).asText())
+			assertThat(nerField.get("groups").get(1).get("tags").get(0).asString())
 					.isEqualTo("ner");
 
 			// clean_normhash: vector, no i18n, DynamicMapper wrapping NormalizedTextHashMapper
 			JsonNode hashField = fieldByName(fields, "clean_normhash");
 			assertThat(hashField.get("vector").asBoolean()).isTrue();
 			assertThat(hashField.has("i18n")).isFalse();
-			assertThat(hashField.get("dynamic").get("mapper").get("class").asText())
+			assertThat(hashField.get("dynamic").get("mapper").get("class").asString())
 					.isEqualTo("normalized-text-hash");
 		}
 
@@ -170,8 +170,8 @@ class SchemaFileLoaderTest {
 			ObjectNode typeJson = loader.loadOne(f);
 
 			// Name and super
-			assertThat(typeJson.get("name").asText()).isEqualTo("article");
-			assertThat(typeJson.get("super").asText()).isEqualTo("sysobject");
+			assertThat(typeJson.get("name").asString()).isEqualTo("article");
+			assertThat(typeJson.get("super").asString()).isEqualTo("sysobject");
 
 			// Own fields (not inherited)
 			JsonNode fields = typeJson.get("fields");
@@ -179,20 +179,20 @@ class SchemaFileLoaderTest {
 			assertThat(fields.size()).isEqualTo(8); // author, publication, published_date, category, tags, content, excerpt, source_url
 
 			// Verify specific fields
-			assertThat(fieldByName(fields, "author").get("type").asText()).isEqualTo("core_string");
-			assertThat(fieldByName(fields, "published_date").get("type").asText()).isEqualTo("core_date");
-			assertThat(fieldByName(fields, "source_url").get("type").asText()).isEqualTo("core_url");
+			assertThat(fieldByName(fields, "author").get("type").asString()).isEqualTo("core_string");
+			assertThat(fieldByName(fields, "published_date").get("type").asString()).isEqualTo("core_date");
+			assertThat(fieldByName(fields, "source_url").get("type").asString()).isEqualTo("core_url");
 
 			// Vector fields
 			JsonNode categoryField = fieldByName(fields, "category");
 			assertThat(categoryField.get("vector").asBoolean()).isTrue();
-			assertThat(categoryField.get("type").asText()).isEqualTo("core_string");
+			assertThat(categoryField.get("type").asString()).isEqualTo("core_string");
 
 			JsonNode tagsField = fieldByName(fields, "tags");
 			assertThat(tagsField.get("vector").asBoolean()).isTrue();
 
 			// MLS field
-			assertThat(fieldByName(fields, "content").get("type").asText()).isEqualTo("core_mls");
+			assertThat(fieldByName(fields, "content").get("type").asString()).isEqualTo("core_mls");
 		}
 	}
 
@@ -220,8 +220,8 @@ class SchemaFileLoaderTest {
 
 			ObjectNode typeJson = loader.loadFromString(schema);
 
-			assertThat(typeJson.get("name").asText()).isEqualTo("string");
-			assertThat(typeJson.get("primitivetype").asText()).isEqualTo("string");
+			assertThat(typeJson.get("name").asString()).isEqualTo("string");
+			assertThat(typeJson.get("primitivetype").asString()).isEqualTo("string");
 		}
 
 		@Test
@@ -245,16 +245,16 @@ class SchemaFileLoaderTest {
 
 			ObjectNode typeJson = loader.loadFromString(schema);
 
-			assertThat(typeJson.get("name").asText()).isEqualTo("widget");
+			assertThat(typeJson.get("name").asString()).isEqualTo("widget");
 
 			JsonNode fields = typeJson.get("fields");
 			assertThat(fields.size()).isEqualTo(3);
 
-			assertThat(fieldByName(fields, "label").get("type").asText()).isEqualTo("core_string");
-			assertThat(fieldByName(fields, "count").get("type").asText()).isEqualTo("core_long");
+			assertThat(fieldByName(fields, "label").get("type").asString()).isEqualTo("core_string");
+			assertThat(fieldByName(fields, "count").get("type").asString()).isEqualTo("core_long");
 
 			JsonNode valuesField = fieldByName(fields, "values");
-			assertThat(valuesField.get("type").asText()).isEqualTo("core_string");
+			assertThat(valuesField.get("type").asString()).isEqualTo("core_string");
 			assertThat(valuesField.get("vector").asBoolean()).isTrue();
 		}
 	}
@@ -284,12 +284,12 @@ class SchemaFileLoaderTest {
 
 			// Verify a primitive
 			ObjectNode stringType = types.get("core_string");
-			assertThat(stringType.get("name").asText()).isEqualTo("string");
-			assertThat(stringType.get("primitivetype").asText()).isEqualTo("string");
+			assertThat(stringType.get("name").asString()).isEqualTo("string");
+			assertThat(stringType.get("primitivetype").asString()).isEqualTo("string");
 
 			// Verify article has super
 			ObjectNode articleType = types.get("demo_article");
-			assertThat(articleType.get("super").asText()).isEqualTo("sysobject");
+			assertThat(articleType.get("super").asString()).isEqualTo("sysobject");
 		}
 
 		@Test
@@ -348,8 +348,8 @@ class SchemaFileLoaderTest {
 					""";
 
 			// Verify key structural properties match
-			assertThat(fromSchema.get("name").asText()).isEqualTo("article");
-			assertThat(fromSchema.get("super").asText()).isEqualTo("sysobject");
+			assertThat(fromSchema.get("name").asString()).isEqualTo("article");
+			assertThat(fromSchema.get("super").asString()).isEqualTo("sysobject");
 
 			JsonNode fields = fromSchema.get("fields");
 			assertThat(fields.size()).isEqualTo(8);
@@ -368,10 +368,10 @@ class SchemaFileLoaderTest {
 
 			for (int i = 0; i < expected.length; i++) {
 				JsonNode field = fields.get(i);
-				assertThat(field.get("name").asText())
+				assertThat(field.get("name").asString())
 						.as("Field %d name", i)
 						.isEqualTo(expected[i][0]);
-				assertThat(field.get("type").asText())
+				assertThat(field.get("type").asString())
 						.as("Field %d type", i)
 						.isEqualTo(expected[i][1]);
 				boolean expectVector = "true".equals(expected[i][2]);
@@ -388,7 +388,7 @@ class SchemaFileLoaderTest {
 
 	private JsonNode fieldByName(JsonNode fields, String name) {
 		for (JsonNode f : fields) {
-			if (name.equals(f.get("name").asText())) {
+			if (name.equals(f.get("name").asString())) {
 				return f;
 			}
 		}

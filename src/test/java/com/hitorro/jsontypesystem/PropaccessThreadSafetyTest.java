@@ -1,6 +1,6 @@
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
 import org.junit.jupiter.api.DisplayName;
@@ -58,11 +58,11 @@ class PropaccessThreadSafetyTest {
                         JVS jvs = JVS.read(json);
                         try {
                             JsonNode title = (JsonNode) jvs.get("title.mls[0].text");
-                            if (title == null || !"Hello".equals(title.textValue())) {
+                            if (title == null || !"Hello".equals(title.stringValue())) {
                                 errors.incrementAndGet();
                             }
                             JsonNode body = (JsonNode) jvs.get("body.mls[0].text");
-                            if (body == null || !"World".equals(body.textValue())) {
+                            if (body == null || !"World".equals(body.stringValue())) {
                                 errors.incrementAndGet();
                             }
                         } catch (PropaccessError e) {

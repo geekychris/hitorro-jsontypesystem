@@ -21,9 +21,9 @@
  */
 package com.hitorro.jsontypesystem.schema;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.util.json.String2JsonMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,8 +53,8 @@ class JsonSchema2TypeConverterTest {
 
 		ObjectNode result = converter.convert(schema);
 
-		assertThat(result.get("name").asText()).isEqualTo("string");
-		assertThat(result.get("primitivetype").asText()).isEqualTo("string");
+		assertThat(result.get("name").asString()).isEqualTo("string");
+		assertThat(result.get("primitivetype").asString()).isEqualTo("string");
 		assertThat(result.has("fields")).isFalse();
 	}
 
@@ -74,8 +74,8 @@ class JsonSchema2TypeConverterTest {
 
 		ObjectNode result = converter.convert(schema);
 
-		assertThat(result.get("name").asText()).isEqualTo("long");
-		assertThat(result.get("primitivetype").asText()).isEqualTo("long");
+		assertThat(result.get("name").asString()).isEqualTo("long");
+		assertThat(result.get("primitivetype").asString()).isEqualTo("long");
 	}
 
 	@Test
@@ -97,7 +97,7 @@ class JsonSchema2TypeConverterTest {
 
 		ObjectNode result = converter.convert(schema);
 
-		assertThat(result.get("name").asText()).isEqualTo("id");
+		assertThat(result.get("name").asString()).isEqualTo("id");
 		assertThat(result.has("primitivetype")).isFalse();
 		assertThat(result.has("fields")).isTrue();
 
@@ -107,8 +107,8 @@ class JsonSchema2TypeConverterTest {
 
 		// Check first field
 		JsonNode domainField = fields.get(0);
-		assertThat(domainField.get("name").asText()).isEqualTo("domain");
-		assertThat(domainField.get("type").asText()).isEqualTo("core_string");
+		assertThat(domainField.get("name").asString()).isEqualTo("domain");
+		assertThat(domainField.get("type").asString()).isEqualTo("core_string");
 	}
 
 	@Test
@@ -132,8 +132,8 @@ class JsonSchema2TypeConverterTest {
 		ObjectNode result = converter.convert(schema);
 
 		JsonNode field = result.get("fields").get(0);
-		assertThat(field.get("name").asText()).isEqualTo("items");
-		assertThat(field.get("type").asText()).isEqualTo("core_long");
+		assertThat(field.get("name").asString()).isEqualTo("items");
+		assertThat(field.get("type").asString()).isEqualTo("core_long");
 		assertThat(field.get("vector").asBoolean()).isTrue();
 	}
 
@@ -162,7 +162,7 @@ class JsonSchema2TypeConverterTest {
 
 		JsonNode field = result.get("fields").get(0);
 		assertThat(field.has("dynamic")).isTrue();
-		assertThat(field.get("dynamic").get("class").asText())
+		assertThat(field.get("dynamic").get("class").asString())
 				.isEqualTo("com.hitorro.jsontypesystem.dynamic.MultiValueMergerDM");
 	}
 
@@ -191,7 +191,7 @@ class JsonSchema2TypeConverterTest {
 		JsonNode field = result.get("fields").get(0);
 		assertThat(field.has("groups")).isTrue();
 		assertThat(field.get("groups").isArray()).isTrue();
-		assertThat(field.get("groups").get(0).get("name").asText()).isEqualTo("index");
+		assertThat(field.get("groups").get(0).get("name").asString()).isEqualTo("index");
 	}
 
 	@Test
@@ -238,9 +238,9 @@ class JsonSchema2TypeConverterTest {
 
 		ObjectNode result = converter.convert(schema);
 
-		assertThat(result.get("name").asText()).isEqualTo("mlselem");
+		assertThat(result.get("name").asString()).isEqualTo("mlselem");
 		assertThat(result.has("indexseeker")).isTrue();
-		assertThat(result.get("indexseeker").get("class").asText())
+		assertThat(result.get("indexseeker").get("class").asString())
 				.isEqualTo("com.hitorro.jsontypesystem.IsoLanguageSeeker");
 		assertThat(result.get("fetchlang").asBoolean()).isTrue();
 	}
@@ -268,9 +268,9 @@ class JsonSchema2TypeConverterTest {
 
 		ObjectNode result = converter.convert(schema);
 
-		assertThat(result.get("name").asText()).isEqualTo("child");
-		assertThat(result.get("super").asText()).isEqualTo("parent");
+		assertThat(result.get("name").asString()).isEqualTo("child");
+		assertThat(result.get("super").asString()).isEqualTo("parent");
 		assertThat(result.has("fields")).isTrue();
-		assertThat(result.get("fields").get(0).get("name").asText()).isEqualTo("extra");
+		assertThat(result.get("fields").get(0).get("name").asString()).isEqualTo("extra");
 	}
 }

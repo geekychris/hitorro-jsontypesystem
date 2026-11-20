@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.schema.Name2SchemaJsonMapper;
 import com.hitorro.jsontypesystem.schema.TypeSchemaRegistry;
 import com.hitorro.util.basefile.Name2JsonMapper;

@@ -21,9 +21,9 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
@@ -233,11 +233,11 @@ class ExecutionBuilderTest {
 		@DisplayName("Text values should remain text in index target")
 		void textPreservation() {
 			ObjectNode target = JsonNodeFactory.instance.objectNode();
-			JsonNode textVal = JsonNodeFactory.instance.textNode("hello");
+			JsonNode textVal = JsonNodeFactory.instance.stringNode("hello");
 			target.set("name.text_en_s", textVal);
 
-			assertThat(target.get("name.text_en_s").isTextual()).isTrue();
-			assertThat(target.get("name.text_en_s").textValue()).isEqualTo("hello");
+			assertThat(target.get("name.text_en_s").isString()).isTrue();
+			assertThat(target.get("name.text_en_s").stringValue()).isEqualTo("hello");
 		}
 
 		@Test
@@ -251,7 +251,7 @@ class ExecutionBuilderTest {
 
 			// Second value — simulate IndexerAction promotion
 			JsonNode existing = target.get("hash.long_m");
-			com.fasterxml.jackson.databind.node.ArrayNode arr = JsonNodeFactory.instance.arrayNode();
+			tools.jackson.databind.node.ArrayNode arr = JsonNodeFactory.instance.arrayNode();
 			arr.add(existing);
 			target.set("hash.long_m", arr);
 			arr.add(JsonNodeFactory.instance.numberNode(20L));

@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.BaseT;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.jsontypesystem.JsonTypeSystem;
@@ -140,7 +140,7 @@ class NewProjectionsTest {
 			JsonNode fields = demo.getMetaNode().get("fields");
 			assertThat(fields.isArray()).isTrue();
 			// demo_document has ~11 fields — spot-check a couple of well-known ones
-			assertThat(demo.getMetaNode().get("name").asText()).isEqualTo("document");
+			assertThat(demo.getMetaNode().get("name").asString()).isEqualTo("document");
 		}
 	}
 
@@ -384,8 +384,8 @@ class NewProjectionsTest {
 
 			JsonNode author = doc.getJsonNode().get("author");
 			assertThat(author.isObject()).isTrue();
-			assertThat(author.get("name").asText()).isEqualTo("Chris Collins");
-			assertThat(author.get("email").asText()).isEqualTo("chris@hitorro.com");
+			assertThat(author.get("name").asString()).isEqualTo("Chris Collins");
+			assertThat(author.get("email").asString()).isEqualTo("chris@hitorro.com");
 		}
 
 		@Test
@@ -460,7 +460,7 @@ class NewProjectionsTest {
 			pc.documentStore = store;
 			plan.getExecutor().project(pc);
 
-			assertThat(doc.getJsonNode().get("author").get("name").asText()).isEqualTo("Chris");
+			assertThat(doc.getJsonNode().get("author").get("name").asString()).isEqualTo("Chris");
 		}
 
 		@Test
@@ -485,7 +485,7 @@ class NewProjectionsTest {
 			pc.documentStore = store;
 			plan.getExecutor().project(pc);
 
-			assertThat(doc.getJsonNode().get("author").get("name").asText()).isEqualTo("Chris");
+			assertThat(doc.getJsonNode().get("author").get("name").asString()).isEqualTo("Chris");
 		}
 	}
 
@@ -512,8 +512,8 @@ class NewProjectionsTest {
 			// Flattened text goes to TARGET.
 			JsonNode content = target.getJsonNode().get("content");
 			assertThat(content).isNotNull();
-			assertThat(content.isTextual()).isTrue();
-			assertThat(content.asText()).contains("renard");
+			assertThat(content.isString()).isTrue();
+			assertThat(content.asString()).contains("renard");
 			// Source envelope is preserved intact so a subsequent projection can pick a different lang.
 			JsonNode srcContent = doc.getJsonNode().get("content");
 			assertThat(srcContent.isObject()).isTrue();
@@ -544,8 +544,8 @@ class NewProjectionsTest {
 			frPc.target = frTarget;
 			plan.getExecutor().project(frPc, frPc.path, false, "fr");
 
-			assertThat(enTarget.getJsonNode().get("content").asText()).contains("quick brown fox");
-			assertThat(frTarget.getJsonNode().get("content").asText()).contains("renard");
+			assertThat(enTarget.getJsonNode().get("content").asString()).contains("quick brown fox");
+			assertThat(frTarget.getJsonNode().get("content").asString()).contains("renard");
 		}
 
 		@Test
@@ -565,7 +565,7 @@ class NewProjectionsTest {
 			pc.target = target;
 			plan.getExecutor().project(pc, pc.path, false, "de"); // German not present → fallback
 
-			assertThat(target.getJsonNode().get("content").asText()).contains("quick brown fox");
+			assertThat(target.getJsonNode().get("content").asString()).contains("quick brown fox");
 		}
 
 		@Test

@@ -23,7 +23,7 @@ package com.hitorro.jsontypesystem.dynamic;
 
 //ht.jsontypesystem.dynamic.DynamicMapper
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.util.core.iterator.mappers.JsonInitableMapper;
 import com.hitorro.util.json.keys.JsonInitableProperty;

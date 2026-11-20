@@ -21,8 +21,8 @@
  */
 package com.hitorro.jsontypesystem.schema;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.jsontypesystem.JsonTypeSystem;
 import com.hitorro.jsontypesystem.Type;
 import org.junit.jupiter.api.DisplayName;
@@ -46,10 +46,10 @@ class Type2JsonSchemaConverterTest {
 
 		ObjectNode schema = converter.convert(type);
 
-		assertThat(schema.get("$schema").asText()).isEqualTo(SCHEMA_URI);
-		assertThat(schema.get(X_HITORRO_NAME).asText()).isEqualTo("string");
-		assertThat(schema.get("type").asText()).isEqualTo("string");
-		assertThat(schema.get(X_HITORRO_PRIMITIVETYPE).asText()).isEqualTo("string");
+		assertThat(schema.get("$schema").asString()).isEqualTo(SCHEMA_URI);
+		assertThat(schema.get(X_HITORRO_NAME).asString()).isEqualTo("string");
+		assertThat(schema.get("type").asString()).isEqualTo("string");
+		assertThat(schema.get(X_HITORRO_PRIMITIVETYPE).asString()).isEqualTo("string");
 	}
 
 	@Test
@@ -60,8 +60,8 @@ class Type2JsonSchemaConverterTest {
 
 		ObjectNode schema = converter.convert(type);
 
-		assertThat(schema.get("type").asText()).isEqualTo("integer");
-		assertThat(schema.get(X_HITORRO_PRIMITIVETYPE).asText()).isEqualTo("long");
+		assertThat(schema.get("type").asString()).isEqualTo("integer");
+		assertThat(schema.get(X_HITORRO_PRIMITIVETYPE).asString()).isEqualTo("long");
 	}
 
 	@Test
@@ -72,8 +72,8 @@ class Type2JsonSchemaConverterTest {
 
 		ObjectNode schema = converter.convert(type);
 
-		assertThat(schema.get("type").asText()).isEqualTo("boolean");
-		assertThat(schema.get(X_HITORRO_PRIMITIVETYPE).asText()).isEqualTo("boolean");
+		assertThat(schema.get("type").asString()).isEqualTo("boolean");
+		assertThat(schema.get(X_HITORRO_PRIMITIVETYPE).asString()).isEqualTo("boolean");
 	}
 
 	@Test
@@ -84,8 +84,8 @@ class Type2JsonSchemaConverterTest {
 
 		ObjectNode schema = converter.convert(type);
 
-		assertThat(schema.get("type").asText()).isEqualTo("string");
-		assertThat(schema.get(X_HITORRO_PRIMITIVETYPE).asText()).isEqualTo("date");
+		assertThat(schema.get("type").asString()).isEqualTo("string");
+		assertThat(schema.get(X_HITORRO_PRIMITIVETYPE).asString()).isEqualTo("date");
 	}
 
 	@Test
@@ -96,7 +96,7 @@ class Type2JsonSchemaConverterTest {
 
 		ObjectNode schema = converter.convert(type);
 
-		assertThat(schema.get("type").asText()).isEqualTo("object");
+		assertThat(schema.get("type").asString()).isEqualTo("object");
 		assertThat(schema.has("properties")).isTrue();
 
 		JsonNode props = schema.get("properties");
@@ -112,7 +112,7 @@ class Type2JsonSchemaConverterTest {
 
 		// id_hash should be a vector (array type)
 		JsonNode idHashProp = props.get("id_hash");
-		assertThat(idHashProp.get("type").asText()).isEqualTo("array");
+		assertThat(idHashProp.get("type").asString()).isEqualTo("array");
 		assertThat(idHashProp.has("items")).isTrue();
 	}
 
@@ -147,7 +147,7 @@ class Type2JsonSchemaConverterTest {
 		assertThat(props.has("mls")).isTrue();
 
 		JsonNode mlsProp = props.get("mls");
-		assertThat(mlsProp.get("type").asText()).isEqualTo("array");
+		assertThat(mlsProp.get("type").asString()).isEqualTo("array");
 	}
 
 	@Test

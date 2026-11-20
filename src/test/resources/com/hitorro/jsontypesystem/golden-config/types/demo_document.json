@@ -1,0 +1,100 @@
+{
+  "name": "document",
+  "description": "Document management with version control, metadata, and full-text content",
+  "super": "sysobject",
+  "fields": [
+    {
+      "name": "filename",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier"
+        }
+      ]
+    },
+    {
+      "name": "file_type",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier"
+        }
+      ]
+    },
+    {
+      "name": "file_size",
+      "type": "core_long",
+      "groups": [
+        {
+          "name": "index",
+          "method": "long"
+        }
+      ]
+    },
+    {
+      "name": "version",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier"
+        }
+      ]
+    },
+    {
+      "name": "author",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier"
+        }
+      ]
+    },
+    {
+      "name": "department",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier"
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "type": "core_mls"
+    },
+    {
+      "name": "keywords",
+      "type": "core_string",
+      "vector": true,
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier"
+        }
+      ]
+    },
+    {
+      "name": "classification",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier"
+        }
+      ]
+    },
+    {
+      "name": "checksum",
+      "type": "core_string"
+    },
+    {
+      "name": "download_url",
+      "type": "core_url"
+    }
+  ]
+}

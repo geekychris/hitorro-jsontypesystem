@@ -21,10 +21,10 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.util.json.JSONUtil;
 
 public class JVSMerger {
@@ -43,10 +43,10 @@ public class JVSMerger {
 					if (baseChild != null) {
 						merge(baseChild, val[i]);
 					} else {
-						((ObjectNode) base).put(keys[i], val[i]);
+						((ObjectNode) base).set(keys[i], val[i]);
 					}
 				} else {
-					((ObjectNode) base).put(keys[i], val[i]);
+					((ObjectNode) base).set(keys[i], val[i]);
 				}
 			}
 		} else if (overide.isArray()) {

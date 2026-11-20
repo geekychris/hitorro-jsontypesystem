@@ -26,7 +26,7 @@ import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer;
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.util.core.Env;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.json.String2JsonMapper;
@@ -37,6 +37,7 @@ import java.nio.LongBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * ONNX-based multilingual NER using a HuggingFace transformer model (XLM-RoBERTa).
@@ -273,7 +274,7 @@ public class OnnxNerFinder {
         String json = Files.readString(labelsFile.toPath());
         JsonNode node = new String2JsonMapper().apply(json);
         Map<Integer, String> labels = new HashMap<>();
-        node.fields().forEachRemaining(e -> labels.put(Integer.parseInt(e.getKey()), e.getValue().asText()));
+        node.properties().iterator().forEachRemaining(e -> labels.put(Integer.parseInt(e.getKey()), JsonValues.asText(e.getValue())));
         return labels;
     }
 }

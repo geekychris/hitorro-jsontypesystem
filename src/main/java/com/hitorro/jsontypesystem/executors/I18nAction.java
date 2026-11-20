@@ -21,13 +21,14 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.Group;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
+import tools.jackson.databind.node.StringNode;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Flatten a {@code core_mls}-shaped multi-language envelope into a scalar string for the
@@ -64,7 +65,7 @@ public class I18nAction implements ExecutorAction<ExecutionBuilder> {
 
             String text = pickText(mlsArr, lang);
             if (text != null && pc.target != null) {
-                pc.target.set(path, new TextNode(text));
+                pc.target.set(path, new StringNode(text));
             }
         } catch (PropaccessError e) {
             Log.util.error("I18nAction failed for path %s: %s", path, e.getMessage());
@@ -83,10 +84,10 @@ public class I18nAction implements ExecutorAction<ExecutionBuilder> {
             if (entry == null || !entry.isObject()) continue;
             JsonNode langNode = entry.get("lang");
             JsonNode textNode = entry.get("text");
-            if (langNode == null || !langNode.isTextual()) continue;
-            if (textNode == null || !textNode.isTextual()) continue;
-            String l = langNode.textValue();
-            String t = textNode.textValue();
+            if (langNode == null || !langNode.isString()) continue;
+            if (textNode == null || !textNode.isString()) continue;
+            String l = JsonValues.textValue(langNode);
+            String t = JsonValues.textValue(textNode);
             if (preferredLang != null && preferredLang.equalsIgnoreCase(l) && preferredText == null) {
                 preferredText = t;
             }

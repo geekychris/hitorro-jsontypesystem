@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.util.typesystem.TypeFieldDataType;
 
 import java.util.ArrayList;
@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Validates a JVS document against a Type definition.
@@ -61,7 +62,7 @@ public class JVSValidator {
 		var violations = new ArrayList<Violation>();
 		JsonNode root = doc.getJsonNode();
 		validateFields(root, typeDef, "", violations);
-		String typeName = typeDef.has("name") ? typeDef.get("name").asText() : "unknown";
+		String typeName = typeDef.has("name") ? JsonValues.asText(typeDef.get("name")) : "unknown";
 		checkExtraFields(root, typeDef, "", typeName, violations);
 		return violations;
 	}
@@ -72,7 +73,7 @@ public class JVSValidator {
 
 	public static final String reportAgainstDefinition(JVS doc, JsonNode typeDef) {
 		var violations = validateAgainstDefinition(doc, typeDef);
-		String typeName = typeDef.has("name") ? typeDef.get("name").asText() : "unknown";
+		String typeName = typeDef.has("name") ? JsonValues.asText(typeDef.get("name")) : "unknown";
 		if (violations.isEmpty()) {
 			return "OK — document is valid for type: " + typeName;
 		}
@@ -91,12 +92,12 @@ public class JVSValidator {
 		if (!fieldsNode.isArray()) return;
 
 		for (JsonNode fieldDef : fieldsNode) {
-			String fieldName = fieldDef.has("name") ? fieldDef.get("name").asText() : null;
+			String fieldName = fieldDef.has("name") ? JsonValues.asText(fieldDef.get("name")) : null;
 			if (fieldName == null) continue;
 
 			String path = prefix.isEmpty() ? fieldName : prefix + "." + fieldName;
 			boolean isDynamic = fieldDef.has("dynamic") && !fieldDef.get("dynamic").isNull();
-			boolean isVector = fieldDef.has("vector") && fieldDef.get("vector").asBoolean();
+			boolean isVector = fieldDef.has("vector") && JsonValues.asBoolean(fieldDef.get("vector"));
 
 			// Skip dynamic fields — they're computed, not stored
 			if (isDynamic) continue;
@@ -120,7 +121,7 @@ public class JVSValidator {
 			}
 
 			// Primitive type check
-			String fieldTypeName = fieldDef.has("type") ? fieldDef.get("type").asText() : null;
+			String fieldTypeName = fieldDef.has("type") ? JsonValues.asText(fieldDef.get("type")) : null;
 			if (fieldTypeName != null && !isVector) {
 				checkPrimitiveType(path, value, fieldTypeName, violations);
 			}
@@ -139,7 +140,7 @@ public class JVSValidator {
 
 		switch (normalized) {
 			case "string" -> {
-				if (!value.isTextual() && !value.isObject()) {
+				if (!value.isString() && !value.isObject()) {
 					violations.add(new Violation(path, "expected string but got " + value.getNodeType(), Level.ERROR));
 				}
 			}
@@ -154,7 +155,7 @@ public class JVSValidator {
 				}
 			}
 			case "date" -> {
-				if (!value.isTextual()) {
+				if (!value.isString()) {
 					violations.add(new Violation(path, "expected date string but got " + value.getNodeType(), Level.ERROR));
 				}
 			}
@@ -169,7 +170,7 @@ public class JVSValidator {
 		// Also allow common metadata fields
 		knownFields.add("type");
 
-		Iterator<String> fieldNames = node.fieldNames();
+		Iterator<String> fieldNames = node.propertyNames().iterator();
 		while (fieldNames.hasNext()) {
 			String name = fieldNames.next();
 			if (!knownFields.contains(name)) {
@@ -184,7 +185,7 @@ public class JVSValidator {
 		if (typeDef != null && typeDef.has("fields") && typeDef.get("fields").isArray()) {
 			for (JsonNode fieldDef : typeDef.get("fields")) {
 				if (fieldDef.has("name")) {
-					names.add(fieldDef.get("name").asText());
+					names.add(JsonValues.asText(fieldDef.get("name")));
 				}
 			}
 		}

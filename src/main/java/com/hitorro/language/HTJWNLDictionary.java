@@ -21,8 +21,8 @@
  */
 package com.hitorro.language;
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.core.events.cache.SingletonCache;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;

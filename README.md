@@ -557,7 +557,7 @@ NERMarkupMapper.loadFinders(language)
 <dependency>
     <groupId>com.hitorro</groupId>
     <artifactId>hitorro-jsontypesystem</artifactId>
-    <version>3.0.1</version>
+    <version>4.0.0</version>
 </dependency>
 ```
 
@@ -574,8 +574,8 @@ Some tests require `HT_HOME` set to the project root and config files present at
 
 | Dependency | Version | Purpose |
 |------------|---------|---------|
-| hitorro-core | 3.0.1 | Foundation (Propaccess, JSON, file I/O) |
-| Jackson | 2.18.2 | JSON processing |
+| hitorro-core | 4.0.0 | Foundation (Propaccess, JSON, file I/O) |
+| Jackson | 3.1.8 (`tools.jackson`) | JSON processing. 4.0.0 moved from Jackson 2; JSON formats are unchanged |
 | Groovy | 3.0.23 | Data mapping DSL |
 | OpenNLP tools | 2.5.0 | Sentence detection, POS tagging, NER, chunking |
 | OpenNLP DL | 2.5.0 | ONNX Runtime for transformer NER models |

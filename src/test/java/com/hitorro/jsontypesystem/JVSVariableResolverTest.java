@@ -21,11 +21,11 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.node.StringNode;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -36,29 +36,29 @@ class JVSVariableResolverTest {
 	@DisplayName("Should resolve single variable")
 	void shouldResolveSingleVariable() throws Exception {
 		JVS master = JVS.read("{\"name\":\"World\"}");
-		TextNode input = JsonNodeFactory.instance.textNode("Hello ${name}");
+		StringNode input = JsonNodeFactory.instance.stringNode("Hello ${name}");
 
 		JsonNode result = JVSVariableResolver.resolveVariableAux(input, master);
 
-		assertThat(result.textValue()).isEqualTo("Hello World");
+		assertThat(result.stringValue()).isEqualTo("Hello World");
 	}
 
 	@Test
 	@DisplayName("Should resolve multiple variables")
 	void shouldResolveMultipleVariables() throws Exception {
 		JVS master = JVS.read("{\"first\":\"John\",\"last\":\"Doe\"}");
-		TextNode input = JsonNodeFactory.instance.textNode("${first} ${last}");
+		StringNode input = JsonNodeFactory.instance.stringNode("${first} ${last}");
 
 		JsonNode result = JVSVariableResolver.resolveVariableAux(input, master);
 
-		assertThat(result.textValue()).isEqualTo("John Doe");
+		assertThat(result.stringValue()).isEqualTo("John Doe");
 	}
 
 	@Test
 	@DisplayName("Should return original when no variables present")
 	void shouldReturnOriginalWhenNoVariables() throws Exception {
 		JVS master = JVS.read("{\"name\":\"World\"}");
-		TextNode input = JsonNodeFactory.instance.textNode("Hello World");
+		StringNode input = JsonNodeFactory.instance.stringNode("Hello World");
 
 		JsonNode result = JVSVariableResolver.resolveVariableAux(input, master);
 
@@ -70,18 +70,18 @@ class JVSVariableResolverTest {
 	@DisplayName("Should handle missing variables gracefully")
 	void shouldHandleMissingVariables() throws Exception {
 		JVS master = JVS.read("{\"name\":\"World\"}");
-		TextNode input = JsonNodeFactory.instance.textNode("Hello ${missing}");
+		StringNode input = JsonNodeFactory.instance.stringNode("Hello ${missing}");
 
 		JsonNode result = JVSVariableResolver.resolveVariableAux(input, master);
 
-		assertThat(result.textValue()).isEqualTo("Hello ");
+		assertThat(result.stringValue()).isEqualTo("Hello ");
 	}
 
 	@Test
 	@DisplayName("Should return non-textual variable value directly")
 	void shouldReturnNonTextualVariableDirectly() throws Exception {
 		JVS master = JVS.read("{\"count\":42}");
-		TextNode input = JsonNodeFactory.instance.textNode("${count}");
+		StringNode input = JsonNodeFactory.instance.stringNode("${count}");
 
 		JsonNode result = JVSVariableResolver.resolveVariableAux(input, master);
 
@@ -93,11 +93,11 @@ class JVSVariableResolverTest {
 	@DisplayName("Should resolve variables case-insensitively")
 	void shouldResolveVariablesCaseInsensitively() throws Exception {
 		JVS master = JVS.read("{\"name\":\"World\"}");
-		TextNode input = JsonNodeFactory.instance.textNode("Hello ${NAME}");
+		StringNode input = JsonNodeFactory.instance.stringNode("Hello ${NAME}");
 
 		JsonNode result = JVSVariableResolver.resolveVariableAux(input, master);
 
-		assertThat(result.textValue()).isEqualTo("Hello World");
+		assertThat(result.stringValue()).isEqualTo("Hello World");
 	}
 
 	@Test
@@ -120,8 +120,8 @@ class JVSVariableResolverTest {
 		JVSVariableResolver.resolveVariables(master, target.getJsonNode());
 
 		JsonNode items = target.get("items");
-		assertThat(items.get(0).textValue()).isEqualTo("X");
-		assertThat(items.get(1).textValue()).isEqualTo("fixed");
+		assertThat(items.get(0).stringValue()).isEqualTo("X");
+		assertThat(items.get(1).stringValue()).isEqualTo("fixed");
 	}
 
 	@Test
@@ -142,6 +142,6 @@ class JVSVariableResolverTest {
 
 		JsonNode result = JVSVariableResolver.resolveTextVariableAux("${val}", master, override);
 
-		assertThat(result.textValue()).isEqualTo("from-override");
+		assertThat(result.stringValue()).isEqualTo("from-override");
 	}
 }

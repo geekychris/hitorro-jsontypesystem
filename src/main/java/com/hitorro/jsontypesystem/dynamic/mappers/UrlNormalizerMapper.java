@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.dynamic.mappers;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.util.urlparser.UrlNormalizer;
 
 public class UrlNormalizerMapper extends BaseJsonInteropMapper {

@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.projections;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.util.concurrent.ConcurrentHashMap;
 

@@ -21,15 +21,16 @@
  */
 package com.hitorro.jsontypesystem.schema;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Deep structural comparison of two native type JSON configs.
@@ -109,8 +110,8 @@ public class TypeConfigIntegrityChecker {
 		compareNode("indexseeker", expected.get("indexseeker"), actual.get("indexseeker"), diffs);
 
 		// fetchlang
-		boolean expFetch = expected.has("fetchlang") && expected.get("fetchlang").asBoolean();
-		boolean actFetch = actual.has("fetchlang") && actual.get("fetchlang").asBoolean();
+		boolean expFetch = expected.has("fetchlang") && JsonValues.asBoolean(expected.get("fetchlang"));
+		boolean actFetch = actual.has("fetchlang") && JsonValues.asBoolean(actual.get("fetchlang"));
 		if (expFetch != actFetch) {
 			diffs.add("fetchlang: " + expFetch + " != " + actFetch);
 		}
@@ -164,22 +165,22 @@ public class TypeConfigIntegrityChecker {
 
 	private void compareField(String path, JsonNode expected, JsonNode actual, List<String> diffs) {
 		// type — normalize names since native configs mix "mlselem" and "core_mlselem"
-		String expType = normalizeTypeName(expected.has("type") ? expected.get("type").asText() : null);
-		String actType = normalizeTypeName(actual.has("type") ? actual.get("type").asText() : null);
+		String expType = normalizeTypeName(expected.has("type") ? JsonValues.asText(expected.get("type")) : null);
+		String actType = normalizeTypeName(actual.has("type") ? JsonValues.asText(actual.get("type")) : null);
 		if (expType != null && !expType.equals(actType)) {
 			diffs.add(path + ".type: " + expType + " != " + actType);
 		}
 
 		// vector
-		boolean expVec = expected.has("vector") && expected.get("vector").asBoolean();
-		boolean actVec = actual.has("vector") && actual.get("vector").asBoolean();
+		boolean expVec = expected.has("vector") && JsonValues.asBoolean(expected.get("vector"));
+		boolean actVec = actual.has("vector") && JsonValues.asBoolean(actual.get("vector"));
 		if (expVec != actVec) {
 			diffs.add(path + ".vector: " + expVec + " != " + actVec);
 		}
 
 		// i18n
-		boolean expI18n = expected.has("i18n") && expected.get("i18n").asBoolean();
-		boolean actI18n = actual.has("i18n") && actual.get("i18n").asBoolean();
+		boolean expI18n = expected.has("i18n") && JsonValues.asBoolean(expected.get("i18n"));
+		boolean actI18n = actual.has("i18n") && JsonValues.asBoolean(actual.get("i18n"));
 		if (expI18n != actI18n) {
 			diffs.add(path + ".i18n: " + expI18n + " != " + actI18n);
 		}
@@ -221,8 +222,8 @@ public class TypeConfigIntegrityChecker {
 	}
 
 	private void compareScalar(String path, JsonNode expected, JsonNode actual, String key, List<String> diffs) {
-		String expVal = expected.has(key) ? expected.get(key).asText() : null;
-		String actVal = actual.has(key) ? actual.get(key).asText() : null;
+		String expVal = expected.has(key) ? JsonValues.asText(expected.get(key)) : null;
+		String actVal = actual.has(key) ? JsonValues.asText(actual.get(key)) : null;
 
 		// Treat "null" text as null
 		if ("null".equals(expVal)) expVal = null;
@@ -256,7 +257,7 @@ public class TypeConfigIntegrityChecker {
 	}
 
 	private void compareObjects(String path, ObjectNode expected, ObjectNode actual, List<String> diffs) {
-		Iterator<Map.Entry<String, JsonNode>> iter = expected.fields();
+		Iterator<Map.Entry<String, JsonNode>> iter = expected.properties().iterator();
 		while (iter.hasNext()) {
 			Map.Entry<String, JsonNode> e = iter.next();
 			String childPath = path.isEmpty() ? e.getKey() : path + "." + e.getKey();
@@ -266,7 +267,7 @@ public class TypeConfigIntegrityChecker {
 				compareNode(childPath, e.getValue(), actual.get(e.getKey()), diffs);
 			}
 		}
-		Iterator<String> actKeys = actual.fieldNames();
+		Iterator<String> actKeys = actual.propertyNames().iterator();
 		while (actKeys.hasNext()) {
 			String key = actKeys.next();
 			if (!expected.has(key)) {
@@ -297,7 +298,7 @@ public class TypeConfigIntegrityChecker {
 		if (fieldsArray != null && fieldsArray.isArray()) {
 			for (JsonNode field : fieldsArray) {
 				if (field.has("name")) {
-					map.put(field.get("name").asText(), field);
+					map.put(JsonValues.asText(field.get("name")), field);
 				}
 			}
 		}

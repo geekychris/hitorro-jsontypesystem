@@ -21,10 +21,11 @@
  */
 package com.hitorro.jsontypesystem.datamapper;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import com.hitorro.util.json.JsonMappers;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -32,6 +33,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Direct-HTTP {@link AIOperations} against a local Ollama endpoint.
@@ -50,7 +52,7 @@ import java.time.Duration;
  */
 public final class HttpOllamaClient implements AIOperations {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper JSON = JsonMappers.json();
 
     private final String baseUrl;
     private final String model;
@@ -94,7 +96,7 @@ public final class HttpOllamaClient implements AIOperations {
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) return null;
             JsonNode parsed = JSON.readTree(resp.body());
             JsonNode response = parsed.get("response");
-            return response == null ? null : response.asText().trim();
+            return response == null ? null : JsonValues.asText(response).trim();
         } catch (Exception e) {
             return null;
         }

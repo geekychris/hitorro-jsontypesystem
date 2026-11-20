@@ -21,9 +21,9 @@
  */
 package com.hitorro.language.mappers;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.basetext.maxentclassifier.OpenNLPClosures;
 import com.hitorro.language.Iso639Table;
 import com.hitorro.language.IsoLanguage;
@@ -32,6 +32,7 @@ import com.hitorro.language.Sentences;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 
 import java.util.function.Function;
+import com.hitorro.util.json.JsonValues;
 
 public class String2SegmentedSentences extends BaseMapper<JsonNode, ArrayNode> {
     private IsoLanguage defaultLang;
@@ -53,7 +54,7 @@ public class String2SegmentedSentences extends BaseMapper<JsonNode, ArrayNode> {
     public ArrayNode apply(JsonNode txtNode, IsoLanguage lang) {
         Function<SentenceSegmenter, ArrayNode> function = (ss) -> {
             ArrayNode ret = JsonNodeFactory.instance.arrayNode();
-            Sentences sentences = ss.getSentenceOffsets(txtNode.textValue());
+            Sentences sentences = ss.getSentenceOffsets(JsonValues.textValue(txtNode));
 
             for (String sent : sentences.getSentences()) {
                 ret.add(sent);
