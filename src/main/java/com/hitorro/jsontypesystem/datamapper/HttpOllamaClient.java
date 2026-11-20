@@ -90,7 +90,8 @@ public final class HttpOllamaClient implements AIOperations {
                     HttpRequest.newBuilder(URI.create(baseUrl + "/api/generate"))
                             .timeout(requestTimeout)
                             .header("content-type", "application/json")
-                            .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8))
+                            // JsonMappers, not body.toString(): on Jackson 3 that throws past 500 nesting levels.
+                            .POST(HttpRequest.BodyPublishers.ofString(com.hitorro.util.json.JsonMappers.json().writeValueAsString(body), StandardCharsets.UTF_8))
                             .build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) return null;

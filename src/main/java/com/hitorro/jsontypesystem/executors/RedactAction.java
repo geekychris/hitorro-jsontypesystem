@@ -80,9 +80,11 @@ public class RedactAction implements ExecutorAction<ExecutionBuilder> {
             if (val == null || val.isNull()) {
                 return; // nothing to redact — matches RemoveAction's leave-empty behaviour
             }
+            // The hashed text is the value's compact JSON. JsonMappers, not val.toString(): on
+            // Jackson 3 that throws past 500 nesting levels (Jackson 2 and JsonMappers: 1000).
             JsonNode replacement = switch (mode) {
-                case "hash" -> JsonNodeFactory.instance.stringNode(sha256Hex(val.toString()));
-                case "hmac" -> JsonNodeFactory.instance.stringNode(hmacSha256Hex(val.toString(), pc.redactionKey));
+                case "hash" -> JsonNodeFactory.instance.stringNode(sha256Hex(com.hitorro.util.json.JsonMappers.json().writeValueAsString(val)));
+                case "hmac" -> JsonNodeFactory.instance.stringNode(hmacSha256Hex(com.hitorro.util.json.JsonMappers.json().writeValueAsString(val), pc.redactionKey));
                 case "null" -> JsonNodeFactory.instance.nullNode();
                 default     -> JsonNodeFactory.instance.stringNode("***");
             };
