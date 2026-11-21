@@ -21,9 +21,10 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.util.List;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Semantic versioning for type definitions.
@@ -36,8 +37,8 @@ public record TypeVersion(String name, String version) implements Comparable<Typ
 	private static final String DEFAULT_VERSION = "1.0.0";
 
 	public static TypeVersion fromDefinition(JsonNode typeDef) {
-		String name = typeDef.has("name") ? typeDef.get("name").asText() : "unknown";
-		String version = typeDef.has("version") ? typeDef.get("version").asText() : DEFAULT_VERSION;
+		String name = typeDef.has("name") ? JsonValues.asText(typeDef.get("name")) : "unknown";
+		String version = typeDef.has("version") ? JsonValues.asText(typeDef.get("version")) : DEFAULT_VERSION;
 		return new TypeVersion(name, version);
 	}
 

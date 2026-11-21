@@ -21,15 +21,16 @@
  */
 package com.hitorro.jsontypesystem.schema;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.Iterator;
 import java.util.Map;
 
 import static com.hitorro.jsontypesystem.schema.HiTorroSchemaConstants.*;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Converts a JSON Schema (with HiTorro extensions) back to the native type JSON format
@@ -42,20 +43,20 @@ public class JsonSchema2TypeConverter {
 
 		// Name
 		if (schema.has(X_HITORRO_NAME)) {
-			typeJson.put("name", schema.get(X_HITORRO_NAME).asText());
+			typeJson.put("name", JsonValues.asText(schema.get(X_HITORRO_NAME)));
 		} else if (schema.has("title")) {
-			typeJson.put("name", schema.get("title").asText());
+			typeJson.put("name", JsonValues.asText(schema.get("title")));
 		}
 
 		// Primitive type
 		if (schema.has(X_HITORRO_PRIMITIVETYPE)) {
-			typeJson.put("primitivetype", schema.get(X_HITORRO_PRIMITIVETYPE).asText());
+			typeJson.put("primitivetype", JsonValues.asText(schema.get(X_HITORRO_PRIMITIVETYPE)));
 			return typeJson;
 		}
 
 		// Super type
 		if (schema.has(X_HITORRO_SUPER)) {
-			typeJson.put("super", schema.get(X_HITORRO_SUPER).asText());
+			typeJson.put("super", JsonValues.asText(schema.get(X_HITORRO_SUPER)));
 		}
 
 		// Index seeker
@@ -64,7 +65,7 @@ public class JsonSchema2TypeConverter {
 		}
 
 		// Fetch lang
-		if (schema.has(X_HITORRO_FETCHLANG) && schema.get(X_HITORRO_FETCHLANG).asBoolean()) {
+		if (schema.has(X_HITORRO_FETCHLANG) && JsonValues.asBoolean(schema.get(X_HITORRO_FETCHLANG))) {
 			typeJson.put("fetchlang", true);
 		}
 
@@ -72,7 +73,7 @@ public class JsonSchema2TypeConverter {
 		ObjectNode properties = findProperties(schema);
 		if (properties != null && properties.size() > 0) {
 			ArrayNode fields = JsonNodeFactory.instance.arrayNode();
-			Iterator<Map.Entry<String, JsonNode>> iter = properties.fields();
+			Iterator<Map.Entry<String, JsonNode>> iter = properties.properties().iterator();
 			while (iter.hasNext()) {
 				Map.Entry<String, JsonNode> entry = iter.next();
 				ObjectNode field = convertProperty(entry.getKey(), entry.getValue());
@@ -112,13 +113,13 @@ public class JsonSchema2TypeConverter {
 		boolean isVector = false;
 		String typeRef = null;
 
-		if (propSchema.has("type") && "array".equals(propSchema.get("type").asText())) {
+		if (propSchema.has("type") && "array".equals(JsonValues.asText(propSchema.get("type")))) {
 			isVector = true;
 			if (propSchema.has("items") && propSchema.get("items").has("$ref")) {
-				typeRef = propSchema.get("items").get("$ref").asText();
+				typeRef = JsonValues.asText(propSchema.get("items").get("$ref"));
 			}
 		} else if (propSchema.has("$ref")) {
-			typeRef = propSchema.get("$ref").asText();
+			typeRef = JsonValues.asText(propSchema.get("$ref"));
 		}
 
 		if (typeRef != null) {
@@ -141,7 +142,7 @@ public class JsonSchema2TypeConverter {
 		}
 
 		// i18n
-		if (propSchema.has(X_HITORRO_I18N) && propSchema.get(X_HITORRO_I18N).asBoolean()) {
+		if (propSchema.has(X_HITORRO_I18N) && JsonValues.asBoolean(propSchema.get(X_HITORRO_I18N))) {
 			field.put("i18n", true);
 		}
 

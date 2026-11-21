@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.BaseT;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.Group;
@@ -153,7 +153,7 @@ class ProjectionIntegrationTest implements TestPlus {
 			JsonNode targetNode = target.getJsonNode();
 			// Find the index field (will be named count.long_s or similar)
 			boolean foundNumber = false;
-			var iter = targetNode.fields();
+			var iter = targetNode.properties().iterator();
 			while (iter.hasNext()) {
 				var entry = iter.next();
 				if (entry.getKey().startsWith("count")) {
@@ -195,7 +195,7 @@ class ProjectionIntegrationTest implements TestPlus {
 			// Should have an array with 3 values in the target
 			JsonNode targetNode = target.getJsonNode();
 			boolean foundArray = false;
-			var iter = targetNode.fields();
+			var iter = targetNode.properties().iterator();
 			while (iter.hasNext()) {
 				var entry = iter.next();
 				if (entry.getKey().startsWith("tags")) {

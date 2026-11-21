@@ -21,9 +21,10 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.util.*;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Diffs two type definitions and reports what changed.
@@ -88,8 +89,8 @@ public class TypeDiff {
 		if (changes.isEmpty()) {
 			return "No changes between type definitions.";
 		}
-		String oldName = oldDef.has("name") ? oldDef.get("name").asText() : "old";
-		String newName = newDef.has("name") ? newDef.get("name").asText() : "new";
+		String oldName = oldDef.has("name") ? JsonValues.asText(oldDef.get("name")) : "old";
+		String newName = newDef.has("name") ? JsonValues.asText(newDef.get("name")) : "new";
 		var sb = new StringBuilder();
 		sb.append(changes.size()).append(" change(s) between '")
 				.append(oldName).append("' and '").append(newName).append("':\n");
@@ -105,8 +106,8 @@ public class TypeDiff {
 	 */
 	public static final String generateMigrationScript(JsonNode oldDef, JsonNode newDef) {
 		var changes = diff(oldDef, newDef);
-		String oldName = oldDef.has("name") ? oldDef.get("name").asText() : "old";
-		String newName = newDef.has("name") ? newDef.get("name").asText() : "new";
+		String oldName = oldDef.has("name") ? JsonValues.asText(oldDef.get("name")) : "old";
+		String newName = newDef.has("name") ? JsonValues.asText(newDef.get("name")) : "new";
 
 		var sb = new StringBuilder();
 		sb.append("// Migration script: ").append(oldName).append(" → ").append(newName).append("\n");
@@ -133,7 +134,7 @@ public class TypeDiff {
 			for (Change c : added) {
 				JsonNode fieldDef = newFields.get(c.fieldName());
 				String type = getFieldType(fieldDef);
-				boolean isVector = fieldDef.has("vector") && fieldDef.get("vector").asBoolean();
+				boolean isVector = fieldDef.has("vector") && JsonValues.asBoolean(fieldDef.get("vector"));
 				boolean isDynamic = fieldDef.has("dynamic") && !fieldDef.get("dynamic").isNull();
 
 				if (isDynamic) {
@@ -165,7 +166,7 @@ public class TypeDiff {
 		if (typeDef.has("fields") && typeDef.get("fields").isArray()) {
 			for (JsonNode f : typeDef.get("fields")) {
 				if (f.has("name")) {
-					map.put(f.get("name").asText(), f);
+					map.put(JsonValues.asText(f.get("name")), f);
 				}
 			}
 		}
@@ -173,7 +174,7 @@ public class TypeDiff {
 	}
 
 	private static String getFieldType(JsonNode fieldDef) {
-		return fieldDef.has("type") ? fieldDef.get("type").asText() : "unknown";
+		return fieldDef.has("type") ? JsonValues.asText(fieldDef.get("type")) : "unknown";
 	}
 
 	private static String compareField(JsonNode oldField, JsonNode newField) {
@@ -185,14 +186,14 @@ public class TypeDiff {
 			diffs.add("type: " + oldType + " → " + newType);
 		}
 
-		boolean oldVector = oldField.has("vector") && oldField.get("vector").asBoolean();
-		boolean newVector = newField.has("vector") && newField.get("vector").asBoolean();
+		boolean oldVector = oldField.has("vector") && JsonValues.asBoolean(oldField.get("vector"));
+		boolean newVector = newField.has("vector") && JsonValues.asBoolean(newField.get("vector"));
 		if (oldVector != newVector) {
 			diffs.add("vector: " + oldVector + " → " + newVector);
 		}
 
-		boolean oldI18n = oldField.has("i18n") && oldField.get("i18n").asBoolean();
-		boolean newI18n = newField.has("i18n") && newField.get("i18n").asBoolean();
+		boolean oldI18n = oldField.has("i18n") && JsonValues.asBoolean(oldField.get("i18n"));
+		boolean newI18n = newField.has("i18n") && JsonValues.asBoolean(newField.get("i18n"));
 		if (oldI18n != newI18n) {
 			diffs.add("i18n: " + oldI18n + " → " + newI18n);
 		}

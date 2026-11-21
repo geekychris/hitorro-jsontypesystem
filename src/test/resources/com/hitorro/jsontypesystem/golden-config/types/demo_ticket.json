@@ -1,0 +1,57 @@
+{
+  "name": "ticket",
+  "description": "Support ticket or issue tracker with status, priority, and assignment",
+  "super": "sysobject",
+  "fields": [
+    {
+      "name": "ticket_number",
+      "type": "core_string"
+    },
+    {
+      "name": "status",
+      "type": "core_string"
+    },
+    {
+      "name": "priority",
+      "type": "core_string"
+    },
+    {
+      "name": "category",
+      "type": "core_string"
+    },
+    {
+      "name": "assigned_to",
+      "type": "core_string"
+    },
+    {
+      "name": "reporter",
+      "type": "core_string"
+    },
+    {
+      "name": "issue",
+      "type": "core_mls"
+    },
+    {
+      "name": "resolution",
+      "type": "core_mls"
+    },
+    {
+      "name": "tags",
+      "type": "core_string",
+      "vector": true
+    },
+    {
+      "name": "due_date",
+      "type": "core_date"
+    },
+    {
+      "name": "closed_date",
+      "type": "core_date"
+    },
+    {
+      "name": "attachments",
+      "type": "core_url",
+      "vector": true
+    }
+  ]
+}

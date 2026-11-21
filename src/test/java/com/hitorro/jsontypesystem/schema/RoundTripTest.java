@@ -21,8 +21,8 @@
  */
 package com.hitorro.jsontypesystem.schema;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.jsontypesystem.JsonTypeSystem;
 import com.hitorro.jsontypesystem.Type;
 import org.junit.jupiter.api.Disabled;
@@ -66,15 +66,15 @@ class RoundTripTest {
 
 		// Verify structural equality of key properties
 		JsonNode metaNode = type.getMetaNode();
-		assertThat(nativeJson.get("name").asText())
+		assertThat(nativeJson.get("name").asString())
 				.as("Round-trip name for %s", typeName)
-				.isEqualTo(metaNode.get("name").asText());
+				.isEqualTo(metaNode.get("name").asString());
 
 		// Primitive types should round-trip the primitivetype field
 		if (type.isPrimitiveType()) {
 			assertThat(nativeJson.has("primitivetype")).isTrue();
-			assertThat(nativeJson.get("primitivetype").asText())
-					.isEqualTo(metaNode.get("primitivetype").asText());
+			assertThat(nativeJson.get("primitivetype").asString())
+					.isEqualTo(metaNode.get("primitivetype").asString());
 		}
 
 		// Composite types should preserve field count

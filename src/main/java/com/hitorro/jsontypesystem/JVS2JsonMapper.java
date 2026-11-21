@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 
 public class JVS2JsonMapper extends BaseMapper<JVS, JsonNode> {

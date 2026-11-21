@@ -1,0 +1,52 @@
+{
+  "name": "event",
+  "description": "Calendar event with location, attendees, and scheduling",
+  "super": "sysobject",
+  "fields": [
+    {
+      "name": "start_date",
+      "type": "core_date"
+    },
+    {
+      "name": "end_date",
+      "type": "core_date"
+    },
+    {
+      "name": "location",
+      "type": "core_string"
+    },
+    {
+      "name": "location_details",
+      "type": "core_mls"
+    },
+    {
+      "name": "organizer",
+      "type": "core_string"
+    },
+    {
+      "name": "attendees",
+      "type": "core_string",
+      "vector": true
+    },
+    {
+      "name": "event_type",
+      "type": "core_string"
+    },
+    {
+      "name": "capacity",
+      "type": "core_long"
+    },
+    {
+      "name": "registration_url",
+      "type": "core_url"
+    },
+    {
+      "name": "virtual_link",
+      "type": "core_url"
+    },
+    {
+      "name": "agenda",
+      "type": "core_mls"
+    }
+  ]
+}

@@ -21,11 +21,12 @@
  */
 package com.hitorro.jsontypesystem.dynamic;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.util.json.keys.StringProperty;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
+import com.hitorro.util.json.JsonValues;
 
 //ht.jsontypesystem.dynamic.MultiValueMergerDM
 public class MultiValueMergerDM extends DynamicFieldMapper {
@@ -53,9 +54,9 @@ public class MultiValueMergerDM extends DynamicFieldMapper {
             if (arr[i] == null) {
                 sb.append(nullValue);
             } else {
-                sb.append(arr[i].textValue());
+                sb.append(JsonValues.textValue(arr[i]));
             }
         }
-        return JsonNodeFactory.instance.textNode(sb.toString());
+        return JsonNodeFactory.instance.stringNode(sb.toString());
     }
 }

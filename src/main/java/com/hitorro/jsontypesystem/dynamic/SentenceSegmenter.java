@@ -21,13 +21,14 @@
  */
 package com.hitorro.jsontypesystem.dynamic;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.language.mappers.String2SegmentedSentences;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import opennlp.tools.util.Span;
+import com.hitorro.util.json.JsonValues;
 
 
 public class SentenceSegmenter extends com.hitorro.jsontypesystem.dynamic.DynamicFieldMapper {
@@ -39,8 +40,8 @@ public class SentenceSegmenter extends com.hitorro.jsontypesystem.dynamic.Dynami
         if (n != null && n.isArray()) {
             ArrayNode ret = JsonNodeFactory.instance.arrayNode();
             for (JsonNode row : n) {
-                int s = row.get(0).intValue();
-                int e = row.get(1).intValue();
+                int s = JsonValues.intValue(row.get(0));
+                int e = JsonValues.intValue(row.get(1));
                 spans[i++] = new Span(s, e, text);
             }
         }
@@ -55,12 +56,12 @@ public class SentenceSegmenter extends com.hitorro.jsontypesystem.dynamic.Dynami
                 return null;
             }
             JsonNode n = arr[0];
-            String text = arr[1].textValue();
+            String text = JsonValues.textValue(arr[1]);
             if (n != null && n.isArray()) {
                 ArrayNode ret = JsonNodeFactory.instance.arrayNode();
                 for (JsonNode row : n) {
-                    int s = row.get(0).intValue();
-                    int e = row.get(1).intValue();
+                    int s = JsonValues.intValue(row.get(0));
+                    int e = JsonValues.intValue(row.get(1));
                     ret.add(text.substring(s, e));
                 }
                 return ret;

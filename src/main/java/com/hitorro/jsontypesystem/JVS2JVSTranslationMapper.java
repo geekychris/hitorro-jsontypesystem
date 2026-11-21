@@ -21,15 +21,16 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * A mapper that translates multilingual string (mls) fields in JVS objects to multiple target languages.
@@ -214,7 +215,7 @@ public class JVS2JVSTranslationMapper extends BaseMapper<JVS, JVS> {
     private boolean hasLanguage(JsonNode mlsNode, String lang) {
         for (int i = 0; i < mlsNode.size(); i++) {
             JsonNode elem = mlsNode.get(i);
-            if (elem != null && elem.has("lang") && lang.equals(elem.get("lang").asText())) {
+            if (elem != null && elem.has("lang") && lang.equals(JsonValues.asText(elem.get("lang")))) {
                 return true;
             }
         }

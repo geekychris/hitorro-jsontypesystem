@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.datamapper;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.util.json.String2JsonMapper;
 import org.junit.jupiter.api.BeforeAll;
@@ -71,7 +71,7 @@ class TypeAwareGeneratorTest {
 			JVS doc = TypeAwareGenerator.generateFromDefinition(def, generators);
 
 			assertThat(doc.get("title")).isNotNull();
-			assertThat(doc.get("title").isTextual()).isTrue();
+			assertThat(doc.get("title").isString()).isTrue();
 		}
 
 		@Test

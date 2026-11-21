@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.Group;
 import com.hitorro.util.json.keys.propaccess.Propaccess;

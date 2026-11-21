@@ -1,0 +1,123 @@
+{
+  "name": "product",
+  "description": "E-commerce product with specifications, pricing, and inventory",
+  "super": "sysobject",
+  "fields": [
+    {
+      "name": "sku",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "brand",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "category",
+      "type": "core_string",
+      "vector": true,
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "price",
+      "type": "core_long",
+      "groups": [
+        {
+          "name": "index",
+          "method": "long",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "currency",
+      "type": "core_string",
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "in_stock",
+      "type": "core_boolean",
+      "groups": [
+        {
+          "name": "index",
+          "method": "boolean",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "quantity",
+      "type": "core_long",
+      "groups": [
+        {
+          "name": "index",
+          "method": "long",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "specifications",
+      "type": "core_mls"
+    },
+    {
+      "name": "images",
+      "type": "core_url",
+      "vector": true,
+      "groups": [
+        {
+          "name": "index",
+          "method": "identifier",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "reviews_count",
+      "type": "core_long",
+      "groups": [
+        {
+          "name": "index",
+          "method": "long",
+          "tags": ["basic"]
+        }
+      ]
+    },
+    {
+      "name": "rating",
+      "type": "core_long",
+      "groups": [
+        {
+          "name": "index",
+          "method": "long",
+          "tags": ["basic"]
+        }
+      ]
+    }
+  ]
+}

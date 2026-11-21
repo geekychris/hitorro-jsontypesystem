@@ -21,17 +21,18 @@
  */
 package com.hitorro.jsontypesystem.dynamic.mappers;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.util.core.iterator.mappers.JsonInitableMapper;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.hitorro.util.json.JsonValues;
 
 public abstract class BaseJsonInteropMapper extends JsonInitableMapper<JsonNode, JsonNode> {
     public String toStringFromJsonNode(JsonNode node) {
-        return node.textValue();
+        return JsonValues.textValue(node);
     }
 
     public String stringMap(String node) {
@@ -43,7 +44,7 @@ public abstract class BaseJsonInteropMapper extends JsonInitableMapper<JsonNode,
     }
 
     public JsonNode toJsonNodeFromString(String s) {
-        return JsonNodeFactory.instance.textNode(s);
+        return JsonNodeFactory.instance.stringNode(s);
     }
 
     public ArrayNode string2JsonVec(List<String> l) {
@@ -57,7 +58,7 @@ public abstract class BaseJsonInteropMapper extends JsonInitableMapper<JsonNode,
     public List<String> json2StringVec(ArrayNode an) {
         ArrayList<String> l = new ArrayList<>();
         for (JsonNode e : an) {
-            l.add(stringMap(e.textValue()));
+            l.add(stringMap(JsonValues.textValue(e)));
         }
         return l;
     }

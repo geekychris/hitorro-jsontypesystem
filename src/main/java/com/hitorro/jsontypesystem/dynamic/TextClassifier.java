@@ -21,9 +21,9 @@
  */
 package com.hitorro.jsontypesystem.dynamic;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.basetext.maxentclassifier.BaseClassifier;
 import com.hitorro.basetext.maxentclassifier.ChunkParser;
 import com.hitorro.basetext.maxentclassifier.OpenNLPClosures;
@@ -36,13 +36,14 @@ import opennlp.tools.cmdline.parser.ParserTool;
 import opennlp.tools.parser.Parse;
 
 import java.util.function.Function;
+import com.hitorro.util.json.JsonValues;
 
 public class TextClassifier extends com.hitorro.jsontypesystem.dynamic.DynamicFieldMapper {
     @Override
     public JsonNode map(final JVS jvs, final Propaccess pa, final int depth) {
         JsonNode arr[] = getValues(jvs, pa, depth);
         if (arr.length > 1) {
-            String langText = arr[0].textValue();
+            String langText = JsonValues.textValue(arr[0]);
             IsoLanguage lang = Iso639Table.getInstance().getRow(langText);
             JsonNode valIn = arr[1];
             return apply(valIn, lang);
@@ -58,7 +59,7 @@ public class TextClassifier extends com.hitorro.jsontypesystem.dynamic.DynamicFi
                 classifier = Models.answerTypeSingleton.get(lang);
                 ArrayNode ret = JsonNodeFactory.instance.arrayNode();
                 for (JsonNode elem : arrayNode) {
-                    Parse parse = ParserTool.parseLine(elem.textValue(), parser, 1)[0];
+                    Parse parse = ParserTool.parseLine(JsonValues.textValue(elem), parser, 1)[0];
                     String p = classifier.getClassification(parse);
                     ret.add(p);
                 }

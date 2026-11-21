@@ -21,8 +21,7 @@
  */
 package com.hitorro.jsontypesystem.dynamic;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.language.Iso639Table;
 import com.hitorro.language.IsoLanguage;
@@ -30,6 +29,8 @@ import com.hitorro.language.LanguageDetectorSingleton;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import opennlp.tools.langdetect.Language;
 import opennlp.tools.langdetect.LanguageDetectorME;
+import tools.jackson.databind.node.StringNode;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Dynamic field mapper that infers the language of a text field and produces an ISO-639-1
@@ -70,12 +71,12 @@ public class LanguageDetectorMapper extends DynamicFieldMapper {
     @Override
     public JsonNode map(JVS jvs, Propaccess pa, int depth) {
         JsonNode[] arr = getValues(jvs, pa, depth);
-        if (arr.length == 0 || arr[0] == null || !arr[0].isTextual()) return null;
-        String text = arr[0].textValue();
+        if (arr.length == 0 || arr[0] == null || !arr[0].isString()) return null;
+        String text = JsonValues.textValue(arr[0]);
         if (text == null || text.length() < MIN_TEXT_LENGTH) return null;
 
         String code = detect(text);
-        return code == null ? null : new TextNode(code);
+        return code == null ? null : new StringNode(code);
     }
 
     /** Package-private for unit-testing without going through DynamicFieldMapper's field wiring. */

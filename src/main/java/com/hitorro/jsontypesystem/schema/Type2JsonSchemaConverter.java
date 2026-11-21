@@ -21,15 +21,16 @@
  */
 package com.hitorro.jsontypesystem.schema;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.jsontypesystem.IndexSeeker;
 import com.hitorro.jsontypesystem.Type;
 import com.hitorro.util.typesystem.TypeFieldDataType;
 
 import static com.hitorro.jsontypesystem.schema.HiTorroSchemaConstants.*;
+import com.hitorro.util.json.JsonValues;
 
 public class Type2JsonSchemaConverter {
 
@@ -133,16 +134,16 @@ public class Type2JsonSchemaConverter {
 		ObjectNode properties = JsonNodeFactory.instance.objectNode();
 
 		for (JsonNode fieldMeta : fieldsNode) {
-			String fieldName = fieldMeta.has("name") ? fieldMeta.get("name").asText() : null;
+			String fieldName = fieldMeta.has("name") ? JsonValues.asText(fieldMeta.get("name")) : null;
 			if (fieldName == null) {
 				continue;
 			}
-			String fieldTypeName = fieldMeta.has("type") ? fieldMeta.get("type").asText() : null;
+			String fieldTypeName = fieldMeta.has("type") ? JsonValues.asText(fieldMeta.get("type")) : null;
 			if (fieldTypeName == null) {
 				continue;
 			}
 
-			boolean isVector = fieldMeta.has("vector") && fieldMeta.get("vector").asBoolean();
+			boolean isVector = fieldMeta.has("vector") && JsonValues.asBoolean(fieldMeta.get("vector"));
 
 			ObjectNode propSchema = JsonNodeFactory.instance.objectNode();
 
@@ -171,7 +172,7 @@ public class Type2JsonSchemaConverter {
 			}
 
 			// i18n
-			if (fieldMeta.has("i18n") && fieldMeta.get("i18n").asBoolean()) {
+			if (fieldMeta.has("i18n") && JsonValues.asBoolean(fieldMeta.get("i18n"))) {
 				propSchema.put(X_HITORRO_I18N, true);
 			}
 

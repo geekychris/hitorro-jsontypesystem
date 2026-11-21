@@ -21,8 +21,11 @@
  */
 package com.hitorro.jsontypesystem.resources;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import com.hitorro.util.json.JsonMappers;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.exc.JacksonIOException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,7 +49,7 @@ import java.nio.file.Paths;
  */
 public final class TypeJsonLoader {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper JSON = JsonMappers.json();
 
     private TypeJsonLoader() { }
 
@@ -58,6 +61,17 @@ public final class TypeJsonLoader {
      * @throws IOException              on transport / parse errors
      * @throws InterruptedException     if the HTTP request is interrupted
      */
+    /** Parse errors stay IOExceptions, as with Jackson 2 (Jackson 3's are unchecked). */
+    private static JsonNode read(InputStream in) throws IOException {
+        try {
+            return JSON.readTree(in);
+        } catch (JacksonIOException e) {
+            throw e.getCause();
+        } catch (JacksonException e) {
+            throw new IOException(e.getMessage(), e);
+        }
+    }
+
     public static JsonNode load(String url) throws IOException, InterruptedException {
         if (url == null || url.isBlank()) {
             throw new IllegalArgumentException("url is required");
@@ -67,12 +81,12 @@ public final class TypeJsonLoader {
             if (path.startsWith("/")) path = path.substring(1);
             try (InputStream in = TypeJsonLoader.class.getClassLoader().getResourceAsStream(path)) {
                 if (in == null) throw new IOException("classpath resource not found: " + path);
-                return JSON.readTree(in);
+                return read(in);
             }
         }
         if (url.startsWith("file:")) {
             Path p = Paths.get(URI.create(url));
-            try (InputStream in = Files.newInputStream(p)) { return JSON.readTree(in); }
+            try (InputStream in = Files.newInputStream(p)) { return read(in); }
         }
         if (url.startsWith("http://") || url.startsWith("https://")) {
             HttpResponse<InputStream> resp = HttpClient.newHttpClient().send(
@@ -81,11 +95,11 @@ public final class TypeJsonLoader {
             if (resp.statusCode() != 200) {
                 throw new IOException("HTTP " + resp.statusCode() + " from " + url);
             }
-            try (InputStream in = resp.body()) { return JSON.readTree(in); }
+            try (InputStream in = resp.body()) { return read(in); }
         }
         // Bare path — treat as local file.
         try (InputStream in = Files.newInputStream(Paths.get(url))) {
-            return JSON.readTree(in);
+            return read(in);
         }
     }
 }

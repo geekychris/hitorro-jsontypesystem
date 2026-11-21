@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.util.json.String2JsonMapper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -399,8 +399,8 @@ class JVSValidatorTest {
 
 			// Sanity: constraints survived the Type.init() round-trip via getMetaNode().
 			JsonNode fields = person.getMetaNode().get("fields");
-			assertThat(fields.get(0).get("format").asText()).isEqualTo("uuid");
-			assertThat(fields.get(1).get("format").asText()).isEqualTo("email");
+			assertThat(fields.get(0).get("format").asString()).isEqualTo("uuid");
+			assertThat(fields.get(1).get("format").asString()).isEqualTo("email");
 			assertThat(fields.get(2).get("minimum").asInt()).isEqualTo(0);
 			assertThat(fields.get(3).get("enum").isArray()).isTrue();
 

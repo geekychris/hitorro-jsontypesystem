@@ -21,9 +21,9 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.util.core.iterator.AbstractIterator;
 import com.hitorro.util.core.string.StringUtil;
 import com.hitorro.util.io.csv.CSVIterator;
@@ -101,7 +101,7 @@ public class CSV2JVSIterator extends AbstractIterator<JVS> {
                     continue;
                 }
                 if (vals[i] == null || vals[i].equals(NullElement)) {
-                    jMap.put(header[i], JsonNodeFactory.instance.nullNode());
+                    jMap.set(header[i], JsonNodeFactory.instance.nullNode());
                 } else {
                     JsonNode elem = null;
                     switch (types[i]) {
@@ -122,10 +122,10 @@ public class CSV2JVSIterator extends AbstractIterator<JVS> {
                             break;
                         case String:
                             String s = (String) types[i].convertFromString(vals[i]);
-                            elem = JsonNodeFactory.instance.textNode(s);
+                            elem = JsonNodeFactory.instance.stringNode(s);
                             break;
                     }
-                    jMap.put(header[i], elem);
+                    jMap.set(header[i], elem);
                 }
             }
 

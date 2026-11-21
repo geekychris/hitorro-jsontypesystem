@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.projections;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 /**
  * SPI for looking up referenced documents. The {@link com.hitorro.jsontypesystem.executors.MaterializeAction

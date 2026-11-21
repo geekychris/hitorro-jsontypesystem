@@ -1,0 +1,81 @@
+{
+  "name": "property",
+  "description": "Real estate property listing with location, features, and pricing",
+  "super": "sysobject",
+  "fields": [
+    {
+      "name": "listing_id",
+      "type": "core_string"
+    },
+    {
+      "name": "property_type",
+      "type": "core_string"
+    },
+    {
+      "name": "address",
+      "type": "core_string"
+    },
+    {
+      "name": "city",
+      "type": "core_string"
+    },
+    {
+      "name": "state",
+      "type": "core_string"
+    },
+    {
+      "name": "zip_code",
+      "type": "core_string"
+    },
+    {
+      "name": "country",
+      "type": "core_string"
+    },
+    {
+      "name": "price",
+      "type": "core_long"
+    },
+    {
+      "name": "bedrooms",
+      "type": "core_long"
+    },
+    {
+      "name": "bathrooms",
+      "type": "core_long"
+    },
+    {
+      "name": "square_feet",
+      "type": "core_long"
+    },
+    {
+      "name": "year_built",
+      "type": "core_long"
+    },
+    {
+      "name": "features",
+      "type": "core_mls"
+    },
+    {
+      "name": "amenities",
+      "type": "core_string",
+      "vector": true
+    },
+    {
+      "name": "images",
+      "type": "core_url",
+      "vector": true
+    },
+    {
+      "name": "virtual_tour",
+      "type": "core_url"
+    },
+    {
+      "name": "agent",
+      "type": "core_string"
+    },
+    {
+      "name": "status",
+      "type": "core_string"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "name": "person",
+  "description": "Person profile with contact info, biography, and social links",
+  "super": "sysobject",
+  "fields": [
+    {
+      "name": "first_name",
+      "type": "core_string"
+    },
+    {
+      "name": "last_name",
+      "type": "core_string"
+    },
+    {
+      "name": "full_name",
+      "type": "core_string",
+      "dynamic": {
+        "class": "multivalue-merger",
+        "fields": [
+          ".first_name",
+          ".last_name"
+        ]
+      }
+    },
+    {
+      "name": "email",
+      "type": "core_string",
+      "vector": true
+    },
+    {
+      "name": "phone",
+      "type": "core_string",
+      "vector": true
+    },
+    {
+      "name": "birth_date",
+      "type": "core_date"
+    },
+    {
+      "name": "biography",
+      "type": "core_mls"
+    },
+    {
+      "name": "skills",
+      "type": "core_string",
+      "vector": true
+    },
+    {
+      "name": "social_profiles",
+      "type": "core_url",
+      "vector": true
+    },
+    {
+      "name": "profile_image",
+      "type": "core_url"
+    }
+  ]
+}

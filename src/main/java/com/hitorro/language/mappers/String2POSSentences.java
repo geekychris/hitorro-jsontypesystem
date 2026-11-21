@@ -21,10 +21,10 @@
  */
 package com.hitorro.language.mappers;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.basetext.maxentclassifier.OpenNLPClosures;
 import com.hitorro.language.Iso639Table;
 import com.hitorro.language.IsoLanguage;
@@ -33,6 +33,7 @@ import com.hitorro.language.PartOfSpeech;
 import com.hitorro.util.core.iterator.mappers.BaseMapper;
 
 import java.util.function.Function;
+import com.hitorro.util.json.JsonValues;
 
 public class String2POSSentences extends BaseMapper<JsonNode, ArrayNode> {
     private IsoLanguage defaultLang;
@@ -54,7 +55,7 @@ public class String2POSSentences extends BaseMapper<JsonNode, ArrayNode> {
 
     public ArrayNode apply(JsonNode txtNode, IsoLanguage lang) {
         Function<PartOfSpeech, ArrayNode> function = (pos) -> {
-            String sentence = txtNode.textValue();
+            String sentence = JsonValues.textValue(txtNode);
 
             POS p = pos.getPOS(sentence);
             String text[] = p.getTokenizedText();
@@ -62,7 +63,7 @@ public class String2POSSentences extends BaseMapper<JsonNode, ArrayNode> {
             ArrayNode row = JsonNodeFactory.instance.arrayNode();
             for (int i = 0; i < text.length; i++) {
                 ObjectNode node = JsonNodeFactory.instance.objectNode();
-                node.set(text[i], JsonNodeFactory.instance.textNode(pe0[i]));
+                node.set(text[i], JsonNodeFactory.instance.stringNode(pe0[i]));
                 row.add(node);
             }
             return row;

@@ -1,8 +1,8 @@
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.util.json.String2JsonMapper;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
@@ -47,8 +47,8 @@ class PAContextTypedTest {
                 JsonNode clean = jvs.get("title.mls[0].clean");
                 // clean should be the HTML-scrubbed version
                 if (clean != null) {
-                    assertThat(clean.textValue()).doesNotContain("<b>");
-                    assertThat(clean.textValue()).contains("Hello");
+                    assertThat(clean.stringValue()).doesNotContain("<b>");
+                    assertThat(clean.stringValue()).contains("Hello");
                     // Second read should return cached value (no recomputation)
                     JsonNode cleanAgain = jvs.get("title.mls[0].clean");
                     assertThat(cleanAgain).isEqualTo(clean);

@@ -1,0 +1,57 @@
+{
+  "name": "recipe",
+  "description": "Cooking recipe with ingredients, instructions, and nutritional info",
+  "super": "sysobject",
+  "fields": [
+    {
+      "name": "cuisine",
+      "type": "core_string"
+    },
+    {
+      "name": "course",
+      "type": "core_string"
+    },
+    {
+      "name": "prep_time",
+      "type": "core_long"
+    },
+    {
+      "name": "cook_time",
+      "type": "core_long"
+    },
+    {
+      "name": "servings",
+      "type": "core_long"
+    },
+    {
+      "name": "difficulty",
+      "type": "core_string"
+    },
+    {
+      "name": "ingredients",
+      "type": "core_mls"
+    },
+    {
+      "name": "instructions",
+      "type": "core_mls"
+    },
+    {
+      "name": "dietary_tags",
+      "type": "core_string",
+      "vector": true
+    },
+    {
+      "name": "calories",
+      "type": "core_long"
+    },
+    {
+      "name": "images",
+      "type": "core_url",
+      "vector": true
+    },
+    {
+      "name": "chef",
+      "type": "core_string"
+    }
+  ]
+}

@@ -21,9 +21,9 @@
  */
 package com.hitorro.jsontypesystem.dynamic;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.language.Iso639Table;
 import com.hitorro.language.IsoLanguage;
@@ -39,6 +39,7 @@ import opennlp.tools.util.Span;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * NER markup dynamic field mapper using OpenNLP NameFinderME directly.
@@ -54,7 +55,7 @@ public class NERMarkupMapper extends DynamicFieldMapper {
             if (arr[0] == null || arr[1] == null) {
                 return null;
             }
-            String langText = arr[0].textValue();
+            String langText = JsonValues.textValue(arr[0]);
             IsoLanguage lang = Iso639Table.getInstance().getRow(langText);
             JsonNode valIn = arr[1];
             return apply(valIn, lang);
@@ -79,9 +80,9 @@ public class NERMarkupMapper extends DynamicFieldMapper {
 
         ArrayNode ret = JsonNodeFactory.instance.arrayNode();
         for (JsonNode elem : arrayNode) {
-            String sentence = elem.textValue();
+            String sentence = JsonValues.textValue(elem);
             if (sentence == null || sentence.isEmpty()) {
-                ret.add(JsonNodeFactory.instance.textNode(""));
+                ret.add(JsonNodeFactory.instance.stringNode(""));
                 continue;
             }
 
@@ -104,7 +105,7 @@ public class NERMarkupMapper extends DynamicFieldMapper {
 
             // Build markup string
             String markup = buildMarkup(tokens, allSpans);
-            ret.add(JsonNodeFactory.instance.textNode(markup));
+            ret.add(JsonNodeFactory.instance.stringNode(markup));
         }
         return ret;
     }

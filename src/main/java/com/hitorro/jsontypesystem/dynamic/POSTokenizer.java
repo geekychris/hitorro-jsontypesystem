@@ -21,12 +21,13 @@
  */
 package com.hitorro.jsontypesystem.dynamic;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.language.Iso639Table;
 import com.hitorro.language.IsoLanguage;
 import com.hitorro.language.mappers.String2POSSentences;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
+import com.hitorro.util.json.JsonValues;
 
 public class POSTokenizer extends com.hitorro.jsontypesystem.dynamic.DynamicFieldMapper {
     private static String2POSSentences mapper = new String2POSSentences();
@@ -38,7 +39,7 @@ public class POSTokenizer extends com.hitorro.jsontypesystem.dynamic.DynamicFiel
             if (arr[0] == null) {
                 return null;
             }
-            String langText = arr[0].textValue();
+            String langText = JsonValues.textValue(arr[0]);
             IsoLanguage lang = Iso639Table.getInstance().getRow(langText);
             JsonNode valIn = arr[1];
             return mapper.apply(valIn, lang);

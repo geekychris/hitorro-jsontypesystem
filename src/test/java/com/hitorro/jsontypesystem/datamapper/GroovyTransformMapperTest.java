@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.datamapper;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.util.core.iterator.MappingIterator;
 import org.junit.jupiter.api.BeforeAll;
@@ -146,8 +146,8 @@ class GroovyTransformMapperTest {
 			JsonNode titleMls = result.get("title.mls");
 			assertThat(titleMls).isNotNull();
 			assertThat(titleMls.isArray()).isTrue();
-			assertThat(titleMls.get(0).get("text").asText()).isEqualTo("Hello World");
-			assertThat(titleMls.get(0).get("lang").asText()).isEqualTo("en");
+			assertThat(titleMls.get(0).get("text").asString()).isEqualTo("Hello World");
+			assertThat(titleMls.get(0).get("lang").asString()).isEqualTo("en");
 		}
 	}
 
@@ -234,8 +234,8 @@ class GroovyTransformMapperTest {
 			JsonNode items = result.get("items");
 			assertThat(items.isArray()).isTrue();
 			assertThat(items.size()).isEqualTo(3);
-			assertThat(items.get(0).asText()).isEqualTo("item_0");
-			assertThat(items.get(2).asText()).isEqualTo("item_2");
+			assertThat(items.get(0).asString()).isEqualTo("item_0");
+			assertThat(items.get(2).asString()).isEqualTo("item_2");
 		}
 	}
 
@@ -443,8 +443,8 @@ class GroovyTransformMapperTest {
 			JVS article = JVS.read("{\"kind\":\"article\",\"tags\":[\"search\",\"ml\"]}");
 			JVS result1 = mapper.apply(article);
 			assertThat(result1.getString("category")).isEqualTo("content");
-			assertThat(result1.get("processed_tags").get(0).asText()).isEqualTo("SEARCH");
-			assertThat(result1.get("processed_tags").get(1).asText()).isEqualTo("ML");
+			assertThat(result1.get("processed_tags").get(0).asString()).isEqualTo("SEARCH");
+			assertThat(result1.get("processed_tags").get(1).asString()).isEqualTo("ML");
 
 			JVS doc = JVS.read("{\"kind\":\"document\"}");
 			JVS result2 = mapper.apply(doc);
@@ -715,9 +715,9 @@ class GroovyTransformMapperTest {
 			JsonNode tags = r.getJsonNode().get("tags");
 			assertThat(tags).isNotNull();
 			assertThat(tags.isArray()).isTrue();
-			assertThat(tags.get(0).textValue()).isEqualTo("foo");
-			assertThat(tags.get(1).textValue()).isEqualTo("bar");
-			assertThat(tags.get(2).textValue()).isEqualTo("baz");
+			assertThat(tags.get(0).stringValue()).isEqualTo("foo");
+			assertThat(tags.get(1).stringValue()).isEqualTo("bar");
+			assertThat(tags.get(2).stringValue()).isEqualTo("baz");
 		}
 
 		@Test

@@ -21,10 +21,10 @@
  */
 package com.hitorro.jsontypesystem.datamapper;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
@@ -35,6 +35,7 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Base class for Groovy DSL transform scripts. Scripts extend this class
@@ -310,11 +311,11 @@ public abstract class TransformDSL extends Script {
 	}
 
 	private void copyJsonInto(JVS target, JVS source) {
-		com.fasterxml.jackson.databind.node.ObjectNode targetNode = (com.fasterxml.jackson.databind.node.ObjectNode) target.getJsonNode();
-		com.fasterxml.jackson.databind.node.ObjectNode sourceNode = (com.fasterxml.jackson.databind.node.ObjectNode) source.getJsonNode();
-		java.util.Iterator<java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode>> fields = sourceNode.fields();
+		tools.jackson.databind.node.ObjectNode targetNode = (tools.jackson.databind.node.ObjectNode) target.getJsonNode();
+		tools.jackson.databind.node.ObjectNode sourceNode = (tools.jackson.databind.node.ObjectNode) source.getJsonNode();
+		java.util.Iterator<java.util.Map.Entry<String, tools.jackson.databind.JsonNode>> fields = sourceNode.properties().iterator();
 		while (fields.hasNext()) {
-			java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode> entry = fields.next();
+			java.util.Map.Entry<String, tools.jackson.databind.JsonNode> entry = fields.next();
 			targetNode.set(entry.getKey(), entry.getValue());
 		}
 	}
@@ -476,7 +477,7 @@ public abstract class TransformDSL extends Script {
 	public void copyAll() {
 		ObjectNode sourceNode = (ObjectNode) ctx.source.getJsonNode();
 		ObjectNode targetNode = (ObjectNode) ctx.target.getJsonNode();
-		Iterator<Map.Entry<String, JsonNode>> fields = sourceNode.fields();
+		Iterator<Map.Entry<String, JsonNode>> fields = sourceNode.properties().iterator();
 		while (fields.hasNext()) {
 			Map.Entry<String, JsonNode> entry = fields.next();
 			targetNode.set(entry.getKey(), entry.getValue().deepCopy());
@@ -749,20 +750,20 @@ public abstract class TransformDSL extends Script {
 		if (o instanceof Number n) return n.doubleValue() != 0.0;
 		if (o instanceof String s) return !s.isEmpty();
 		if (o instanceof JsonNode j) return !j.isNull() && !j.isMissingNode()
-				&& (!j.isTextual() || !j.textValue().isEmpty())
-				&& (!j.isBoolean() || j.booleanValue());
+				&& (!j.isString() || !JsonValues.textValue(j).isEmpty())
+				&& (!j.isBoolean() || JsonValues.booleanValue(j));
 		return true;
 	}
 
 	private static JsonNode toJsonNode(Object o) {
 		if (o == null) return JsonNodeFactory.instance.nullNode();
 		if (o instanceof JsonNode j) return j;
-		if (o instanceof String s) return JsonNodeFactory.instance.textNode(s);
+		if (o instanceof String s) return JsonNodeFactory.instance.stringNode(s);
 		if (o instanceof Integer i) return JsonNodeFactory.instance.numberNode(i);
 		if (o instanceof Long l) return JsonNodeFactory.instance.numberNode(l);
 		if (o instanceof Double d) return JsonNodeFactory.instance.numberNode(d);
 		if (o instanceof Boolean b) return JsonNodeFactory.instance.booleanNode(b);
-		return JsonNodeFactory.instance.textNode(o.toString());
+		return JsonNodeFactory.instance.stringNode(o.toString());
 	}
 
 	// --- Fluent copy builder ---

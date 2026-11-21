@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.Group;
 import com.hitorro.util.core.Log;
@@ -67,8 +67,10 @@ public class FingerprintAction implements ExecutorAction<ExecutionBuilder> {
                 // Sentinel for missing — distinguishable from empty string (length 0).
                 writeInt(pc.fingerprint, -1);
             } else {
-                // toString() preserves type (quotes for strings, bare digits for numbers, etc.).
-                byte[] valBytes = val.toString().getBytes(StandardCharsets.UTF_8);
+                // Compact JSON preserves type (quotes for strings, bare digits for numbers, etc.).
+                // JsonMappers, not val.toString(): on Jackson 3 that throws past 500 nesting levels
+                // (Jackson 2 and JsonMappers: 1000); the bytes are the same below that.
+                byte[] valBytes = com.hitorro.util.json.JsonMappers.json().writeValueAsString(val).getBytes(StandardCharsets.UTF_8);
                 writeInt(pc.fingerprint, valBytes.length);
                 pc.fingerprint.update(valBytes);
             }

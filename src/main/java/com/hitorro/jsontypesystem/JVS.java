@@ -21,12 +21,11 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.util.core.iterator.helpers.FileMappers;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.util.basefile.fs.BaseFile;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.core.date.DateResolution;
@@ -56,6 +55,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import com.hitorro.util.json.JsonValues;
 
 public class JVS implements VS {
 
@@ -174,7 +174,7 @@ public class JVS implements VS {
 			if (n == null) {
 				return value;
 			}
-			return n.textValue();
+			return JsonValues.textValue(n);
 		} catch (PropaccessError propaccessError) {
 			return null;
 		}
@@ -191,7 +191,7 @@ public class JVS implements VS {
 	public List<JsonKeyMap> getSubMaps(String root) throws PropaccessError {
 		List<JsonKeyMap> list = new ArrayList<>();
 		JsonNode childKeys = get(root);
-		Iterator<Map.Entry<String, JsonNode>> iter = childKeys.fields();
+		Iterator<Map.Entry<String, JsonNode>> iter = childKeys.properties().iterator();
 		while (iter.hasNext()) {
 			Map.Entry<String, JsonNode> e = iter.next();
 			list.add(new JsonKeyMap(e.getKey(), e.getValue()));
@@ -350,7 +350,7 @@ public class JVS implements VS {
 		if (node == null || node.isNull()) {
 			return false;
 		}
-		return node.asBoolean();
+		return JsonValues.asBoolean(node);
 	}
 
 	public Date getDate(String path) throws PropaccessError {
@@ -418,7 +418,7 @@ public class JVS implements VS {
 		}
 		List<String> list = new ArrayList<>();
 		ObjectNode on = (ObjectNode) node;
-		Iterator<String> iter = on.fieldNames();
+		Iterator<String> iter = on.propertyNames().iterator();
 		while (iter.hasNext()) {
 			list.add(iter.next());
 		}
@@ -426,7 +426,7 @@ public class JVS implements VS {
 	}
 
 	public boolean isEmpty() {
-		return !root.fieldNames().hasNext();
+		return !root.propertyNames().iterator().hasNext();
 	}
 
 	public JVS remove(String path) throws PropaccessError {

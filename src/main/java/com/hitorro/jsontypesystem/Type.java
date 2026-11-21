@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.executors.EnrichExecutionBuilderMapper;
 import com.hitorro.jsontypesystem.executors.ExecutionBuilder;
 import com.hitorro.jsontypesystem.executors.IndexExecutionBuilderMapper;

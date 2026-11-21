@@ -21,12 +21,13 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.Group;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Dereference a reference-shaped field via the {@link ProjectionContext#documentStore} SPI and
@@ -76,22 +77,22 @@ public class MaterializeAction implements ExecutorAction<ExecutionBuilder> {
     /** Pull an ID string out of common reference shapes. See class Javadoc for priority order. */
     static String extractId(JsonNode ref) {
         if (ref == null || ref.isNull()) return null;
-        if (ref.isTextual()) return ref.textValue();
+        if (ref.isString()) return JsonValues.textValue(ref);
         if (!ref.isObject()) return null;
 
         // 1. Already-computed core_id.id (the multivalue-merger dynamic result).
         JsonNode id = ref.get("id");
         if (id != null) {
-            if (id.isTextual() && !id.textValue().isEmpty()) return id.textValue();
-            if (id.isNumber()) return id.asText();
+            if (id.isString() && !JsonValues.textValue(id).isEmpty()) return JsonValues.textValue(id);
+            if (id.isNumber()) return JsonValues.asText(id);
         }
         // 2. core_id in the pre-dynamic state: synthesise domain:did.
         JsonNode domain = ref.get("domain");
         JsonNode did = ref.get("did");
-        boolean hasDomain = domain != null && domain.isTextual();
-        boolean hasDid    = did != null    && did.isTextual();
+        boolean hasDomain = domain != null && domain.isString();
+        boolean hasDid    = did != null    && did.isString();
         if (hasDomain && hasDid) {
-            return domain.textValue() + CORE_ID_SEPARATOR + did.textValue();
+            return JsonValues.textValue(domain) + CORE_ID_SEPARATOR + JsonValues.textValue(did);
         }
         // Not a shape we understand.
         return null;

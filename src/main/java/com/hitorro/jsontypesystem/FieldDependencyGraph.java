@@ -21,9 +21,10 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.util.*;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Extracts and analyzes the dependency graph between dynamic fields in a type definition.
@@ -55,7 +56,7 @@ public class FieldDependencyGraph {
 	 * Build a dependency graph from a raw type definition JsonNode.
 	 */
 	public static FieldDependencyGraph fromDefinition(JsonNode typeDef) {
-		String name = typeDef.has("name") ? typeDef.get("name").asText() : "unknown";
+		String name = typeDef.has("name") ? JsonValues.asText(typeDef.get("name")) : "unknown";
 		var graph = new FieldDependencyGraph(name);
 
 		if (!typeDef.has("fields") || !typeDef.get("fields").isArray()) {
@@ -64,7 +65,7 @@ public class FieldDependencyGraph {
 
 		// First pass: register all field names
 		for (JsonNode fieldDef : typeDef.get("fields")) {
-			String fieldName = fieldDef.has("name") ? fieldDef.get("name").asText() : null;
+			String fieldName = fieldDef.has("name") ? JsonValues.asText(fieldDef.get("name")) : null;
 			if (fieldName != null) {
 				graph.dependencies.putIfAbsent(fieldName, new LinkedHashSet<>());
 				graph.dependents.putIfAbsent(fieldName, new LinkedHashSet<>());
@@ -73,14 +74,14 @@ public class FieldDependencyGraph {
 
 		// Second pass: extract dependency edges from dynamic field configs
 		for (JsonNode fieldDef : typeDef.get("fields")) {
-			String fieldName = fieldDef.has("name") ? fieldDef.get("name").asText() : null;
+			String fieldName = fieldDef.has("name") ? JsonValues.asText(fieldDef.get("name")) : null;
 			if (fieldName == null) continue;
 
 			if (fieldDef.has("dynamic") && !fieldDef.get("dynamic").isNull()) {
 				JsonNode dynamic = fieldDef.get("dynamic");
 				if (dynamic.has("fields") && dynamic.get("fields").isArray()) {
 					for (JsonNode dep : dynamic.get("fields")) {
-						String depPath = dep.asText();
+						String depPath = JsonValues.asText(dep);
 						// Normalize: ".text" -> "text", ".lang" -> "lang"
 						if (depPath.startsWith(".")) {
 							depPath = depPath.substring(1);

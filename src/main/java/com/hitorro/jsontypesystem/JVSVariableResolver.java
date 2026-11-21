@@ -21,19 +21,20 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.json.JSONUtil;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
+import tools.jackson.databind.node.StringNode;
+import com.hitorro.util.json.JsonValues;
 
 public class JVSVariableResolver {
 
-	public static JsonNode resolveVariableAux(TextNode e, JVS master) throws PropaccessError {
-		String value = e.textValue();
+	public static JsonNode resolveVariableAux(StringNode e, JVS master) throws PropaccessError {
+		String value = JsonValues.textValue(e);
 		JsonNode n = resolveTextVariableAux(value, master, null);
 		if (n == null) {
 			return e;
@@ -75,10 +76,10 @@ public class JVSVariableResolver {
 					res = master.get(variable);
 				}
 				if (res != null) {
-					if (!res.isTextual()) {
+					if (!res.isString()) {
 						return res;
 					}
-					substValue = res.textValue();
+					substValue = JsonValues.textValue(res);
 					builder.append(substValue);
 				}
 				lastPos = endIndex + 1;
@@ -88,7 +89,7 @@ public class JVSVariableResolver {
 		// append tail
 		builder.append(value.substring(lastPos));
 		String txt = builder.toString();
-		return JsonNodeFactory.instance.textNode(txt);
+		return JsonNodeFactory.instance.stringNode(txt);
 	}
 
 	public static void resolveVariables(JVS master, JsonNode node) throws PropaccessError {
@@ -102,10 +103,10 @@ public class JVSVariableResolver {
 			for (int i = 0; i < size; i++) {
 				if (val[i].isObject() || val[i].isArray()) {
 					resolveVariables(master, val[i]);
-				} else if (val[i].isTextual()) {
-					JsonNode res = resolveVariableAux((TextNode) val[i], master);
+				} else if (val[i].isString()) {
+					JsonNode res = resolveVariableAux((StringNode) val[i], master);
 					if (val[i] != res) {
-						on.put(keys[i], res);
+						on.set(keys[i], res);
 					}
 				}
 			}
@@ -114,8 +115,8 @@ public class JVSVariableResolver {
 			int size = ar.size();
 			for (int i = 0; i < size; i++) {
 				JsonNode e = ar.get(i);
-				if (e.isTextual()) {
-					JsonNode res = resolveVariableAux((TextNode) e, master);
+				if (e.isString()) {
+					JsonNode res = resolveVariableAux((StringNode) e, master);
 					if (e != res) {
 						ar.set(i, res);
 					}

@@ -21,7 +21,7 @@
  */
 package com.hitorro.jsontypesystem;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -76,9 +76,9 @@ class JVSMergerTest {
 
 		JsonNode arr = base.get("arr");
 		assertThat(arr.size()).isEqualTo(3);
-		assertThat(arr.get(0).textValue()).isEqualTo("X");
-		assertThat(arr.get(1).textValue()).isEqualTo("b");
-		assertThat(arr.get(2).textValue()).isEqualTo("c");
+		assertThat(arr.get(0).stringValue()).isEqualTo("X");
+		assertThat(arr.get(1).stringValue()).isEqualTo("b");
+		assertThat(arr.get(2).stringValue()).isEqualTo("c");
 	}
 
 	@Test
@@ -91,9 +91,9 @@ class JVSMergerTest {
 
 		JsonNode arr = base.get("arr");
 		assertThat(arr.size()).isEqualTo(3);
-		assertThat(arr.get(0).textValue()).isEqualTo("X");
-		assertThat(arr.get(1).textValue()).isEqualTo("Y");
-		assertThat(arr.get(2).textValue()).isEqualTo("Z");
+		assertThat(arr.get(0).stringValue()).isEqualTo("X");
+		assertThat(arr.get(1).stringValue()).isEqualTo("Y");
+		assertThat(arr.get(2).stringValue()).isEqualTo("Z");
 	}
 
 	@Test
@@ -106,8 +106,8 @@ class JVSMergerTest {
 
 		JsonNode arr = base.get("arr");
 		assertThat(arr.size()).isEqualTo(2);
-		assertThat(arr.get(0).textValue()).isEqualTo("X");
-		assertThat(arr.get(1).textValue()).isEqualTo("Y");
+		assertThat(arr.get(0).stringValue()).isEqualTo("X");
+		assertThat(arr.get(1).stringValue()).isEqualTo("Y");
 	}
 
 	@Test

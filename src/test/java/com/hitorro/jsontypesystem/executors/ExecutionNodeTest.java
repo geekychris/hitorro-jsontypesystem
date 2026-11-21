@@ -21,9 +21,9 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 import com.hitorro.jsontypesystem.JVS;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import org.junit.jupiter.api.DisplayName;
@@ -148,7 +148,7 @@ class ExecutionNodeTest {
 			assertThat(existing.isArray()).isFalse();
 
 			// Simulate IndexerAction's array promotion logic
-			com.fasterxml.jackson.databind.node.ArrayNode arr = JsonNodeFactory.instance.arrayNode();
+			tools.jackson.databind.node.ArrayNode arr = JsonNodeFactory.instance.arrayNode();
 			arr.add(existing);
 			on.set("field", arr);
 			arr.add(JsonNodeFactory.instance.numberNode(20));

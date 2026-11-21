@@ -21,15 +21,16 @@
  */
 package com.hitorro.jsontypesystem.executors;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 import com.hitorro.jsontypesystem.Field;
 import com.hitorro.jsontypesystem.Group;
 import com.hitorro.jsontypesystem.projections.EmbeddingProvider;
 import com.hitorro.util.core.Log;
 import com.hitorro.util.json.keys.propaccess.Propaccess;
 import com.hitorro.util.json.keys.propaccess.PropaccessError;
+import com.hitorro.util.json.JsonValues;
 
 /**
  * Feed the value at each projected path into
@@ -84,7 +85,7 @@ public class VectorizeAction implements ExecutorAction<ExecutionBuilder> {
     /** Language-aware text extraction. Reuses {@link I18nAction#pickText}'s fallback for MLS. */
     static String extractText(JsonNode val, String lang) {
         if (val == null || val.isNull()) return null;
-        if (val.isTextual()) return val.textValue();
+        if (val.isString()) return JsonValues.textValue(val);
         if (val.isObject()) {
             JsonNode mls = val.get("mls");
             if (mls != null && mls.isArray() && !mls.isEmpty()) {
